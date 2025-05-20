@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetterList - ToDo App</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <div class="panel left-panel">
+            <h1 class="betterlist-logo">BETTERLIST</h1>
+            </div>
+
+        <div class="panel middle-panel">
+            <h2 class="panel-title">TODO LIST</h2>
+            <div class="tasks-summary">
+                <div class="progress-circle-container">
+                    <svg class="progress-ring" width="120" height="120">
+                        <circle class="progress-ring-track" stroke="#333" stroke-width="8" fill="transparent" r="50" cx="60" cy="60"/>
+                        <circle class="progress-ring-progress" stroke="#00FF00" stroke-width="8" fill="transparent" r="50" cx="60" cy="60" style="stroke-dasharray: 314; stroke-dashoffset: 314;"></circle>
+                    </svg>
+                    <span class="tasks-left-count">5</span>
+                </div>
+                <div class="tasks-left-text">TASKS LEFT</div>
+            </div>
+
+            <div class="task-list">
+                <div class="task-item">
+                    <div class="task-info">
+                        <span class="task-name">Homework</span>
+                        <span class="task-category">School</span>
+                    </div>
+                    <div class="task-status">
+                        <span class="status-label active">active</span>
+                        <span class="time-left">20:53</span>
+                        <input type="checkbox" class="task-checkbox">
+                    </div>
+                </div>
+                <div class="task-item">
+                    <div class="task-info">
+                        <span class="task-name">Project 2</span>
+                        <span class="task-category">Work</span>
+                    </div>
+                    <div class="task-status">
+                         <input type="checkbox" class="task-checkbox">
+                    </div>
+                </div>
+                <div class="task-item">
+                    <div class="task-info">
+                        <span class="task-name">Grocery</span>
+                        <span class="task-category">Shopping</span>
+                    </div>
+                    <div class="task-status">
+                         <input type="checkbox" class="task-checkbox">
+                    </div>
+                </div>
+                 <div class="task-item">
+                    <div class="task-info">
+                        <span class="task-name">Appointment</span>
+                        <span class="task-category">Personal</span>
+                    </div>
+                    <div class="task-status">
+                         <input type="checkbox" class="task-checkbox">
+                    </div>
+                </div>
+            </div>
+             <button class="add-task-button">+</button>
+        </div>
+
+        <div class="panel right-panel">
+            <h2 class="panel-title">LABELS</h2>
+            <div id="calendar-container">
+                <div id="calendar-header">
+                    <button id="prev-month-btn">&#8249;</button>
+                    <h2 id="month-name">Month</h2>
+                    <button id="next-month-btn">&#8250;</button>
+                </div>
+                <div id="calendar-grid"></div>
+            </div>
+            <div id="digital-clock">12:00:00 <span class="ampm">AM</span></div>
+            <select id="time-format-select">
+                <option value="12">12-hour</option>
+                <option value="24">24-hour</option>
+            </select>
+
+            <div id="fun-fact-container">
+                <p id="fun-fact-display">Click 'Generate' to learn something new!</p>
+            </div>
+            <button id="generate-fact-button">Generate Fact</button>
+        </div>
+    </div>
+    <script src="static/js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,779 @@
+/* General Body and Container Styles */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background-color: #000; /* Pure black background for the body */
+    color: #fff; /* Default text color */
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Make body at least full height of viewport */
+}
+
+.app-container {
+    display: flex;
+    width: 100%;
+    max-width: 1200px; /* Max width for desktop view */
+    height: 100vh; /* Full viewport height on larger screens */
+    overflow: hidden;
+    background-color: #1a1a1a; /* Dark background for the main app area */
+    border-radius: 20px; /* Slightly rounded corners for the app container */
+    box-shadow: 0 0 50px rgba(0, 255, 0, 0.2); /* Soft neon green glow */
+}
+
+/* Panel Styles */
+.panel {
+    display: flex;
+    flex-direction: column;
+    padding: 30px;
+    box-sizing: border-box;
+    position: relative; /* For absolute positioning of pseudo-elements */
+}
+
+.left-panel {
+    flex: 0 0 250px; /* Fixed width for the left panel on desktop */
+    background: linear-gradient(180deg, #102010, #0a1a0a); /* Dark green gradient */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Hide overflowing wavy elements */
+}
+
+.betterlist-logo {
+    font-size: 3em;
+    font-weight: 900; /* Extra bold */
+    color: #00FF00; /* Neon green */
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.5); /* Glow effect */
+    transform: rotate(-90deg); /* Rotate to match the image */
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Wavy abstract shapes for left panel (CSS only) */
+.left-panel::before,
+.left-panel::after {
+    content: '';
+    position: absolute;
+    background: linear-gradient(135deg, rgba(0, 255, 0, 0.3), rgba(0, 200, 0, 0.1));
+    border-radius: 50%;
+    filter: blur(40px); /* Soft blur effect */
+    opacity: 0.6;
+    z-index: 0;
+}
+
+.left-panel::before {
+    width: 200px;
+    height: 200px;
+    top: -50px;
+    left: -50px;
+    transform: rotate(20deg);
+}
+
+.left-panel::after {
+    width: 250px;
+    height: 250px;
+    bottom: -80px;
+    right: -80px;
+    transform: rotate(-40deg);
+}
+
+
+.middle-panel {
+    flex: 2; /* Takes more space */
+    background-color: #242424; /* Slightly lighter dark background */
+    border-right: 1px solid rgba(0, 255, 0, 0.1); /* Subtle divider */
+    border-left: 1px solid rgba(0, 255, 0, 0.1);
+}
+
+.right-panel {
+    flex: 1; /* Takes less space than middle */
+    background-color: #1e1e1e; /* Similar dark background */
+}
+
+.panel-title {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-top: 10px; /* Spacing from top */
+}
+
+/* Middle Panel - Tasks Summary (Progress Circle) */
+.tasks-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+    position: relative; /* For positioning the count */
+}
+
+.progress-circle-container {
+    position: relative;
+    width: 120px; /* Size of the SVG */
+    height: 120px;
+    margin-bottom: 10px;
+}
+
+.progress-ring {
+    transform: rotate(-90deg); /* Start from top */
+    transform-origin: 50% 50%;
+}
+
+.progress-ring-track {
+    stroke: #333; /* Dark gray for the background track */
+    stroke-width: 8;
+    fill: transparent;
+}
+
+.progress-ring-progress {
+    stroke: #00FF00; /* Neon green for the progress */
+    stroke-width: 8;
+    fill: transparent;
+    transition: stroke-dashoffset 0.3s ease-in-out; /* Smooth animation */
+    /* stroke-dasharray and stroke-dashoffset will be controlled by JavaScript */
+}
+
+.tasks-left-count {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    font-weight: bold;
+    color: #00FF00;
+}
+
+.tasks-left-text {
+    font-size: 0.9em;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Task List Styles */
+.task-list {
+    flex-grow: 1; /* Allows it to take up available space */
+    overflow-y: auto; /* Scroll if tasks overflow */
+    padding-right: 10px; /* Space for scrollbar */
+}
+
+.task-item {
+    background-color: #333333; /* Darker background for task cards */
+    border-radius: 10px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 255, 0, 0.1);
+}
+
+.task-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.task-name {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.task-category {
+    font-size: 0.8em;
+    color: #aaa;
+}
+
+.task-status {
+    display: flex;
+    align-items: center;
+}
+
+.status-label {
+    font-size: 0.7em;
+    padding: 4px 8px;
+    border-radius: 5px;
+    margin-right: 10px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.status-label.active {
+    background-color: #00FF00;
+    color: #1a1a1a;
+}
+
+.time-left {
+    font-size: 0.9em;
+    color: #00FF00;
+    margin-right: 15px;
+}
+
+/* Custom Checkbox (to mimic the image's design) */
+.task-checkbox {
+    /* Hide default checkbox */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 25px;
+    height: 25px;
+    border: 2px solid #00FF00; /* Neon green border */
+    border-radius: 5px; /* Slightly rounded square */
+    background-color: transparent;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.task-checkbox:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 255, 0, 0.5); /* Focus glow */
+}
+
+.task-checkbox:checked {
+    background-color: #00FF00; /* Fill with green when checked */
+    border-color: #00FF00;
+}
+
+/* Checkmark inside checkbox */
+.task-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px; /* Width of the checkmark */
+    height: 12px; /* Height of the checkmark */
+    border: solid #1a1a1a; /* Dark color for the checkmark itself */
+    border-width: 0 3px 3px 0;
+    transform: translate(-50%, -60%) rotate(45deg); /* Position and rotate for checkmark */
+}
+
+/* Add Task Button */
+.add-task-button {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 50%; /* Circle shape */
+    width: 60px;
+    height: 60px;
+    font-size: 2.5em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    margin-top: 30px;
+    align-self: flex-end; /* Align to the right in middle panel */
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.add-task-button:hover {
+    background-color: #00e600; /* Slightly darker green on hover */
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Right Panel - Labels */
+.labels-month-selector {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background-color: #2a2a2a;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.labels-month-selector .month {
+    font-size: 0.9em;
+    color: #aaa;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 10px;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.labels-month-selector .month.active {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    font-weight: bold;
+}
+
+.labels-month-selector .month:hover:not(.active) {
+    color: #00FF00;
+}
+
+.labels-graph {
+    margin-bottom: 20px;
+    height: 80px; /* Fixed height for the graph SVG container */
+}
+
+.labels-graph svg path {
+    stroke: #00FF00; /* Neon green line */
+    stroke-width: 2;
+    fill: none; /* No fill for the line */
+}
+
+.labels-time {
+    font-size: 2em;
+    font-weight: 700;
+    color: #00FF00;
+    text-align: center;
+    margin-bottom: 20px;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+}
+
+.labels-today-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.today-label {
+    font-size: 1em;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.today-time {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #00FF00;
+}
+
+.label-list {
+    flex-grow: 1; /* Allows it to take up available space */
+    overflow-y: auto; /* Scroll if labels overflow */
+    padding-right: 10px;
+}
+
+.label-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2a2a2a; /* Slightly lighter dark background for label items */
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.label-name {
+    font-size: 0.95em;
+    color: #fff;
+    font-weight: 500;
+}
+
+.label-time {
+    font-size: 0.85em;
+    color: #00FF00;
+    margin-left: auto; /* Push time to the right */
+    margin-right: 10px;
+}
+
+.remove-label-btn {
+    background-color: transparent;
+    border: 1px solid rgba(255, 0, 0, 0.5);
+    color: rgba(255, 0, 0, 0.8);
+    border-radius: 5px;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.remove-label-btn:hover {
+    background-color: rgba(255, 0, 0, 0.2);
+    color: #FF0000;
+    border-color: #FF0000;
+}
+
+.add-label-button {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 25px;
+    width: 100%; /* Full width */
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.add-label-button:hover {
+    background-color: #00e600;
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column; /* Stack panels vertically on smaller screens */
+        height: auto; /* Allow height to adjust */
+        border-radius: 0; /* No border-radius on mobile */
+        box-shadow: none; /* No shadow on mobile */
+    }
+
+    body {
+        align-items: flex-start; /* Align from top on mobile */
+    }
+
+    .panel {
+        width: 100%; /* Panels take full width */
+        min-height: unset; /* Reset min-height */
+        border-bottom: 1px solid rgba(0, 255, 0, 0.1); /* Separator between stacked panels */
+    }
+
+    .left-panel {
+        flex: none;
+        width: 100%;
+        height: 150px; /* Smaller height for left panel on mobile */
+        border-right: none;
+        border-bottom: 1px solid rgba(0, 255, 0, 0.1); /* Ensure separator */
+        padding: 20px;
+    }
+
+    .betterlist-logo {
+        transform: none; /* No rotation on mobile */
+        font-size: 2.5em;
+        text-align: center;
+        white-space: normal;
+    }
+
+    .left-panel::before,
+    .left-panel::after {
+        filter: blur(20px); /* Less blur on mobile */
+        opacity: 0.4;
+    }
+
+    .middle-panel,
+    .right-panel {
+        border-right: none; /* Remove vertical borders */
+        border-left: none;
+        padding-bottom: 30px; /* Add some padding at the bottom */
+    }
+
+    .panel-title {
+        margin-bottom: 20px;
+    }
+
+    .tasks-summary {
+        margin-bottom: 30px;
+    }
+
+    .add-task-button {
+        align-self: center; /* Center the add button on mobile */
+    }
+
+    .labels-graph {
+        margin-bottom: 15px;
+    }
+
+    .labels-time {
+        font-size: 1.8em;
+        margin-bottom: 15px;
+    }
+
+    .labels-today-summary {
+        margin-bottom: 15px;
+    }
+
+    .add-label-button {
+        margin-top: 20px;
+    }
+}
+
+/* Even smaller screens (e.g., very small phones) */
+@media (max-width: 480px) {
+    .left-panel {
+        height: 120px;
+    }
+
+    .betterlist-logo {
+        font-size: 2em;
+    }
+
+    .panel {
+        padding: 20px;
+    }
+
+    .task-item {
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        flex-direction: column; /* Stack info and status on very small screens */
+        align-items: flex-start;
+    }
+
+    .task-status {
+        margin-top: 10px;
+        width: 100%;
+        justify-content: flex-end; /* Push checkbox to the right */
+    }
+
+    .status-label {
+        margin-right: 5px;
+    }
+
+    .time-left {
+        margin-right: 10px;
+    }
+
+    .label-item {
+        padding: 10px 12px;
+        margin-bottom: 10px;
+    }
+}
+
+/* Custom CSS for Calendar and Clock */
+#calendar-container {
+    background-color: #2a2a2a;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+#calendar-header button {
+    background-color: transparent;
+    border: none;
+    color: #00FF00;
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 5px;
+    transition: transform 0.2s ease;
+}
+
+#calendar-header button:hover {
+    transform: scale(1.2);
+}
+
+#calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    text-align: center;
+}
+
+.calendar-day {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 0.9em;
+}
+
+.calendar-day:hover {
+    background-color: #00FF00;
+    color: #1a1a1a;
+}
+
+.calendar-day.today {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    font-weight: bold;
+}
+
+.calendar-day.inactive {
+    background-color: #2a2a2a;
+    color: #888;
+    cursor: not-allowed;
+}
+
+#digital-clock {
+    font-size: 2em;
+    font-weight: 700;
+    color: #00FF00;
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+}
+
+.ampm {
+    font-size: 0.5em;
+    vertical-align: super;
+}
+
+#time-format-select {
+    background-color: #2a2a2a;
+    color: #fff;
+    border: 1px solid #00FF00;
+    border-radius: 8px;
+    padding: 8px 15px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    margin: 0 auto;
+    display: block;
+}
+
+#time-format-select:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+#time-format-select option {
+    background-color: #2a2a2a;
+    color: #fff;
+}
+
+/* Fun Fact Section */
+#fun-fact-container {
+    background-color: #2a2a2a;
+    border-radius: 15px;
+    padding: 15px;
+    margin-top: 20px; /* Space from the time format selector */
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    min-height: 100px; /* Ensure it has some height even if fact is short */
+    display: flex;
+    align-items: center; /* Vertically center the text */
+    justify-content: center; /* Horizontally center the text */
+    text-align: center;
+}
+
+#fun-fact-display {
+    color: #fff;
+    font-size: 1em;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+#generate-fact-button {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%; /* Full width */
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+#generate-fact-button:hover {
+    background-color: #00e600;
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Styles for In-line Task Editing */
+.task-item.editing {
+    background-color: #3a3a3a; /* Slightly different background when editing */
+    box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4); /* More pronounced glow */
+    border: 1px solid #00FF00; /* Neon border to indicate active editing */
+}
+
+.task-item .edit-input {
+    background-color: #1a1a1a; /* Dark background for input */
+    border: 1px solid #00FF00; /* Neon green border */
+    color: #fff; /* White text */
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-size: 1em;
+    margin-bottom: 5px; /* Space between name and category inputs */
+    width: calc(100% - 22px); /* Adjust width considering padding and border */
+    box-sizing: border-box; /* Include padding and border in element's total width and height */
+}
+
+.task-item .edit-input:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.7);
+}
+
+.task-item .edit-actions {
+    display: flex;
+    gap: 8px; /* Space between buttons */
+    margin-top: 10px; /* Space from inputs */
+}
+
+.task-item .edit-save-btn,
+.task-item .edit-cancel-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.task-item .edit-save-btn {
+    background-color: #00FF00;
+    color: #1a1a1a;
+}
+
+.task-item .edit-save-btn:hover {
+    background-color: #00e600;
+    transform: translateY(-1px);
+}
+
+.task-item .edit-cancel-btn {
+    background-color: #444; /* Dark gray for cancel */
+    color: #fff;
+}
+
+.task-item .edit-cancel-btn:hover {
+    background-color: #555;
+    transform: translateY(-1px);
+}
+
+/* Hide original info when editing */
+.task-item.editing .task-info,
+.task-item.editing .task-status {
+    display: none;
+}
+
+/* Ensure info and status are displayed when not editing */
+.task-item:not(.editing) .task-info,
+.task-item:not(.editing) .task-status {
+    display: flex; /* Or block, as appropriate for original layout */
+    flex-direction: column; /* Revert to column for task-info */
+}
+.task-item:not(.editing) .task-status {
+    flex-direction: row; /* Revert to row for task-status */
+}
+
+/* Adjustments for edit mode layout */
+.task-item.editing {
+    flex-direction: column; /* Stack name, category, buttons vertically */
+    align-items: flex-start; /* Align contents to start */
+}

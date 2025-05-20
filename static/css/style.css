@@ -930,3 +930,83 @@ body {
         padding: 8px 15px;
     }
 }
+
+/* Task Completion Animation */
+.task-item.completing {
+    animation: task-complete 0.4s ease-out forwards;
+    pointer-events: none; /* Disable clicks during animation */
+}
+
+@keyframes task-complete {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        height: auto; /* Use auto for height transition */
+        padding-top: 15px;
+        padding-bottom: 15px;
+        margin-bottom: 10px;
+    }
+    50% {
+        opacity: 0.5;
+        transform: translateY(-10px) scale(0.95);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.8);
+        height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-bottom: 0;
+        overflow: hidden; /* Hide overflow during collapse */
+    }
+}
+
+/* Daily Summary & Streak Styling */
+.tasks-today-summary {
+    background-color: #2a2a2a;
+    border-radius: 15px;
+    padding: 15px;
+    margin-top: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tasks-today-summary .summary-line {
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.tasks-today-summary .summary-line span {
+    color: #00FF00;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.tasks-today-summary .streak-info {
+    font-size: 1em;
+    color: #eee;
+}
+
+.tasks-today-summary .streak-count {
+    color: #00FF00;
+    font-weight: bold;
+    font-size: 1.3em;
+}
+
+.tasks-today-summary .streak-count.broken {
+    color: #FF0000; /* Red for broken streak */
+}
+
+/* Optional: Streak celebration animation */
+.streak-celebration {
+    animation: pulse-green 1s infinite alternate;
+}
+
+@keyframes pulse-green {
+    0% { text-shadow: 0 0 5px rgba(0, 255, 0, 0.5); }
+    100% { text-shadow: 0 0 15px rgba(0, 255, 0, 1); }
+}

@@ -11,7 +11,7 @@
     <div class="app-container">
         <div class="panel left-panel">
             <h1 class="betterlist-logo">BETTERLIST</h1>
-            </div>
+        </div>
 
         <div class="panel middle-panel">
             <h2 class="panel-title">TODO LIST</h2>
@@ -26,47 +26,14 @@
                 <div class="tasks-left-text">TASKS LEFT</div>
             </div>
 
-            <div class="task-list">
-                <div class="task-item">
-                    <div class="task-info">
-                        <span class="task-name">Homework</span>
-                        <span class="task-category">School</span>
-                    </div>
-                    <div class="task-status">
-                        <span class="status-label active">active</span>
-                        <span class="time-left">20:53</span>
-                        <input type="checkbox" class="task-checkbox">
-                    </div>
-                </div>
-                <div class="task-item">
-                    <div class="task-info">
-                        <span class="task-name">Project 2</span>
-                        <span class="task-category">Work</span>
-                    </div>
-                    <div class="task-status">
-                         <input type="checkbox" class="task-checkbox">
-                    </div>
-                </div>
-                <div class="task-item">
-                    <div class="task-info">
-                        <span class="task-name">Grocery</span>
-                        <span class="task-category">Shopping</span>
-                    </div>
-                    <div class="task-status">
-                         <input type="checkbox" class="task-checkbox">
-                    </div>
-                </div>
-                 <div class="task-item">
-                    <div class="task-info">
-                        <span class="task-name">Appointment</span>
-                        <span class="task-category">Personal</span>
-                    </div>
-                    <div class="task-status">
-                         <input type="checkbox" class="task-checkbox">
-                    </div>
-                </div>
+            <div class="tasks-today-summary">
+                <div class="summary-line">Today: <span id="tasks-completed-today">0</span>/<span id="tasks-total-today">0</span> completed</div>
+                <div class="streak-info">Current Streak: <span id="current-streak" class="streak-count">0</span> days</div>
             </div>
-             <button class="add-task-button">+</button>
+
+            <div class="task-list">
+                </div>
+            <button class="add-task-button">+</button>
         </div>
 
         <div class="panel right-panel">

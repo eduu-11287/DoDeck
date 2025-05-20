@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask import render_template
-import datetime # Import datetime module
+import datetime
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -27,10 +27,11 @@ class Task(db.Model):
     category = db.Column(db.String(80), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     time_left = db.Column(db.String(20), nullable=True) # Could be removed later if due_date is primary time field
-    due_date = db.Column(db.DateTime, nullable=True) # New: Store due date as DateTime object
+    due_date = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True) # New: Timestamp when task was completed
 
     def __repr__(self):
-        return f'<Task {self.id}: {self.name} ({self.category}) - Active: {self.is_active} - Due: {self.due_date}>'
+        return f'<Task {self.id}: {self.name} ({self.category}) - Active: {self.is_active} - Due: {self.due_date} - Completed: {self.completed_at}>'
 
     def to_dict(self):
         return {
@@ -38,8 +39,9 @@ class Task(db.Model):
             'name': self.name,
             'category': self.category,
             'isActive': self.is_active,
-            'timeLeft': self.time_left, # Keep for now, might transition to only using due_date
-            'dueDate': self.due_date.isoformat() if self.due_date else None # New: Convert DateTime to ISO format string
+            'timeLeft': self.time_left,
+            'dueDate': self.due_date.isoformat() if self.due_date else None,
+            'completedAt': self.completed_at.isoformat() if self.completed_at else None # New: Include completed_at
         }
 
 # --- API Routes ---
@@ -67,14 +69,11 @@ def add_task():
     new_task = Task(
         name=data['name'],
         category=data.get('category', 'Uncategorized'),
-        is_active=True,
+        is_active=True, # New tasks are always active
         time_left=data.get('timeLeft')
     )
-    # New: Handle due_date from incoming data
     if 'dueDate' in data and data['dueDate']:
         try:
-            # Assuming dueDate comes as "YYYY-MM-DDTHH:MM:SS" or "YYYY-MM-DDTHH:MM"
-            # Python's datetime.fromisoformat() is robust
             new_task.due_date = datetime.datetime.fromisoformat(data['dueDate'])
         except ValueError:
             return jsonify({"error": "Invalid due date format"}), 400
@@ -93,17 +92,21 @@ def update_task(task_id):
     if 'category' in data:
         task.category = data['category']
     if 'isActive' in data:
+        # New: If task is being set to inactive, set completed_at
+        if data['isActive'] == False and task.is_active == True: # If it was active and now is inactive
+            task.completed_at = datetime.datetime.now()
+        elif data['isActive'] == True and task.is_active == False: # If it was inactive and now is active (un-checked)
+            task.completed_at = None # Clear completed_at
         task.is_active = data['isActive']
     if 'timeLeft' in data:
         task.time_left = data['timeLeft']
-    # New: Handle due_date update
-    if 'dueDate' in data: # Check if key exists (even if None)
-        if data['dueDate']: # If it's not None, try to parse
+    if 'dueDate' in data:
+        if data['dueDate']:
             try:
                 task.due_date = datetime.datetime.fromisoformat(data['dueDate'])
             except ValueError:
                 return jsonify({"error": "Invalid due date format"}), 400
-        else: # If it's None, set due_date to None
+        else:
             task.due_date = None
 
     db.session.commit()

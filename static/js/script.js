@@ -1,8 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
-    const BACKEND_URL = 'http://127.0.0.1:5555'; // Ensure this matches your Flask port!
     const USELESS_FACTS_API_URL = 'https://uselessfacts.jsph.pl/random.json?language=en'; // New: API for useless facts
-
+    const BACKEND_URL = 'https://betterlist-7xgp.onrender.com'; // Use your actual Render URL here!
     // --- Element References ---
     const tasksLeftCountSpan = document.querySelector('.tasks-left-count');
     const progressRingProgress = document.querySelector('.progress-ring-progress');

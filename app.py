@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask import render_template
 import datetime
+# Removed: import requests # No longer needed for this API
+# Removed: from dotenv import load_dotenv # No longer needed if you only use .env for API key
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -15,6 +17,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 CORS(app)
+
+# Removed: API_NINJAS_KEY = os.getenv('API_NINJAS_KEY', 'YOUR_API_NINJAS_KEY_HERE')
+# Removed: load_dotenv() # Call to load .env, no longer strictly necessary if no other env vars
 
 @app.route('/')
 def index():
@@ -46,11 +51,6 @@ class Task(db.Model):
 
 # --- API Routes ---
 
-# IMPORTANT: You need to re-initialize your database after this change!
-# 1. Stop your Flask app.
-# 2. Delete the 'tasks.db' file in your project directory.
-# 3. Run the /init-db route once.
-# 4. Then restart your app normally.
 @app.route('/init-db')
 def init_db():
     with app.app_context():
@@ -118,6 +118,9 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"}), 200
+
+# Removed: @app.route('/api/fun-fact', methods=['GET'])
+# Removed the entire get_fun_fact function from here.
 
 if __name__ == '__main__':
     app.run(debug=True, port=5555)

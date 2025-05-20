@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const BACKEND_URL = 'http://127.0.0.1:5555'; // Ensure this matches your Flask port!
+    const USELESS_FACTS_API_URL = 'https://uselessfacts.jsph.pl/random.json?language=en'; // New: API for useless facts
 
     // --- Element References ---
     const tasksLeftCountSpan = document.querySelector('.tasks-left-count');
@@ -32,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Sound Effects ---
     const completeSound = new Audio('static/sounds/ding.mp3'); // You'll need to create or download this!
-    // Example: You can find simple short sounds on sites like freesound.org
-    // Make sure to put 'ding.mp3' in a new `static/sounds/` directory.
 
     // --- Helper Functions ---
 
@@ -89,22 +88,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let completedTodayCount = 0;
         let totalTasksTodayCount = 0;
-        let activeTasksDueTodayOrBefore = 0; // Tasks active and due today or overdue
 
         allTasks.forEach(task => {
-            // Count all active tasks due today or earlier for streak calculation
+            // Count active tasks that have a due date of today or earlier
             if (task.isActive && task.dueDate) {
                 const dueDate = new Date(task.dueDate);
                 dueDate.setHours(0,0,0,0); // Normalize due date to start of day for comparison
                 if (dueDate.getTime() <= today.getTime()) {
                     totalTasksTodayCount++;
                 }
-            } else if (task.isActive && !task.dueDate) {
-                // If a task is active but has no due date, we consider it a 'today' task if we choose to.
-                // For now, let's only count tasks with a due date.
-                // totalTasksTodayCount++; // Uncomment if tasks without due dates count towards daily total
             }
-
 
             // Count completed tasks that were completed today
             if (!task.isActive && task.completedAt) {
@@ -119,117 +112,81 @@ document.addEventListener('DOMContentLoaded', () => {
         tasksCompletedTodaySpan.textContent = completedTodayCount;
         tasksTotalTodaySpan.textContent = totalTasksTodayCount; // This will show tasks active and due today or before
 
-        // --- Streak Logic (Client-side, basic implementation) ---
-        const lastCompletionDate = localStorage.getItem('lastCompletionDate');
+        // --- Basic Client-side Streak Logic ---
+        // This is a simplified streak. For a truly robust and accurate streak,
+        // it's best to track daily completion statuses on the backend.
         let currentStreak = parseInt(localStorage.getItem('currentStreak')) || 0;
+        let lastStreakDate = localStorage.getItem('lastStreakDate'); //YYYY-MM-DD string
 
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
+        const todayStr = today.toISOString().substring(0, 10); //YYYY-MM-DD
 
-        // Check if all tasks due today/overdue are completed (for streak)
-        const allRelevantTasksCompleted = totalTasksTodayCount === completedTodayCount;
-        const lastDate = lastCompletionDate ? new Date(lastCompletionDate) : null;
+        // Logic to update streak if all *relevant* tasks are completed today
+        if (totalTasksTodayCount > 0 && completedTodayCount === totalTasksTodayCount) {
+             if (lastStreakDate !== todayStr) { // If it's a new day since last streak update
+                const lastDateObj = new Date(lastStreakDate);
+                lastDateObj.setHours(0,0,0,0);
 
-        if (allRelevantTasksCompleted && lastDate) {
-            // If today is exactly one day after last completion, continue streak
-            if (lastDate.toDateString() === yesterday.toDateString()) {
-                // Streak continues, do nothing yet
-            } else if (lastDate.toDateString() === today.toDateString()) {
-                // Already counted for today, do nothing
-            } else {
-                // Gap day, streak broken
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                yesterday.setHours(0,0,0,0);
+
+                if (lastDateObj.getTime() === yesterday.getTime()) { // If last streak day was yesterday
+                    currentStreak++;
+                } else { // It's a new completion but not consecutive or first
+                    currentStreak = 1;
+                }
+                localStorage.setItem('currentStreak', currentStreak);
+                localStorage.setItem('lastStreakDate', todayStr);
+                currentStreakSpan.classList.add('streak-celebration'); // Add celebration animation
+                setTimeout(() => {
+                    currentStreakSpan.classList.remove('streak-celebration');
+                }, 1000); // Remove animation after 1 second
+            }
+        } else if (totalTasksTodayCount > 0 && completedTodayCount < totalTasksTodayCount) {
+            // If tasks are still active and due today, or some are incomplete, streak might be broken or needs reset
+            if (lastStreakDate && lastStreakDate !== todayStr) { // If it's a new day and tasks are incomplete
+                const lastDateObj = new Date(lastStreakDate);
+                lastDateObj.setHours(0,0,0,0);
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                yesterday.setHours(0,0,0,0);
+
+                // If streak was active yesterday but not completed today, break it
+                if (lastDateObj.getTime() === yesterday.getTime()) {
+                     currentStreak = 0;
+                     localStorage.setItem('currentStreak', currentStreak);
+                     currentStreakSpan.classList.add('broken');
+                     localStorage.removeItem('lastStreakDate'); // Clear last streak date
+                }
+            }
+        } else if (totalTasksTodayCount === 0 && completedTodayCount === 0 && lastStreakDate && lastStreakDate !== todayStr) {
+            // If no tasks due today and no tasks completed today, and it's a new day,
+            // check if the last streak was for yesterday. If so, maintain it. Otherwise, reset.
+            const lastDateObj = new Date(lastStreakDate);
+            lastDateObj.setHours(0,0,0,0);
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            yesterday.setHours(0,0,0,0);
+
+            if (lastDateObj.getTime() !== yesterday.getTime() && lastDateObj.getTime() !== today.getTime()) {
                 currentStreak = 0;
+                localStorage.setItem('currentStreak', currentStreak);
                 currentStreakSpan.classList.add('broken');
+                localStorage.removeItem('lastStreakDate');
             }
-        } else if (allRelevantTasksCompleted && !lastDate) {
-            // First day completing all tasks
-            currentStreak = 1;
-        } else if (!allRelevantTasksCompleted && lastDate && lastDate.toDateString() !== today.toDateString()) {
-            // Tasks not completed today, and it's a new day since last completion
-            currentStreak = 0;
-            currentStreakSpan.classList.add('broken');
+        } else if (totalTasksTodayCount === 0 && completedTodayCount === 0 && !lastStreakDate) {
+            // No tasks ever, no streak
+             currentStreak = 0;
+             localStorage.setItem('currentStreak', currentStreak);
+             currentStreakSpan.classList.remove('broken');
         }
 
-
-        // If current day's relevant tasks are completed, update streak and last completion date for *tomorrow's* check
-        // This is tricky. A simpler streak check: if all tasks are done today, and it's a *new* day, increment streak.
-        // For accurate streak, you'd need a backend log of daily completions.
-        // Let's simplify: if today's relevant tasks are all done, and it's a new day since last save, increment.
-        // If not, and it's a new day, reset.
-        // This *still* has edge cases without server-side daily "snapshot".
-
-        // For now, let's just make sure the `currentStreak` is updated *if* a task is completed that contributes to today's count,
-        // and add a placeholder for future robust streak logic.
-        // The current 'allRelevantTasksCompleted' and 'completedTodayCount' are for the *display*.
-
-        // For a basic streak, we'll store only the streak number and the last *day* it was updated.
-        // When updating streak:
-        // 1. Get today's date (normalized).
-        // 2. Get `lastStreakDay` from localStorage.
-        // 3. If `lastStreakDay` is yesterday, increment streak.
-        // 4. If `lastStreakDay` is not yesterday and not today, reset streak.
-        // 5. If `lastStreakDay` is today, do nothing (already updated).
-        // 6. Update `lastStreakDay` to today.
-
-        const storedStreak = parseInt(localStorage.getItem('currentStreak')) || 0;
-        const storedLastStreakDate = localStorage.getItem('lastStreakDate'); // YYYY-MM-DD string
-
-        let calculatedStreak = storedStreak;
-        let lastStreakDay = null;
-        if (storedLastStreakDate) {
-            lastStreakDay = new Date(storedLastStreakDate);
-            lastStreakDay.setHours(0,0,0,0);
-        }
-
-        const msInDay = 24 * 60 * 60 * 1000;
-        const nowMs = today.getTime();
-
-        // Check if a new day has started since the last streak update
-        if (lastStreakDay) {
-             const diffDays = Math.round(Math.abs((nowMs - lastStreakDay.getTime()) / msInDay));
-            if (diffDays === 1) { // If last streak update was yesterday
-                // Streak might continue, based on *yesterday's* completion
-                // This requires knowing if *yesterday* was fully completed.
-                // THIS IS WHERE CLIENT-SIDE STREAKS GET MESSY.
-                // For now, let's display a placeholder and acknowledge this needs backend.
-                // A better client-side simple streak: it increments if you complete *any* task.
-                // Let's make it increment if you complete all tasks that were due *yesterday* or before.
-
-            } else if (diffDays > 1) { // More than one day gap
-                calculatedStreak = 0;
-                currentStreakSpan.classList.add('broken');
-            }
-        }
-
-
-        // Simplified streak logic:
-        // Streak means "how many consecutive days you completed *all* tasks that were due on that day or overdue from previous days."
-        // This is complex for pure frontend.
-        // For a "cool" effect now, let's just make a simple streak that increments for *any* task completion today,
-        // and resets if no tasks are done for 24h. This is less robust but visually works.
-
-        // Simpler Streak: Increment when *any* task is completed, reset if no tasks completed in 24 hours.
-        // This is still flawed for "all tasks completed daily."
-        // Let's refine the currentStreakSpan logic:
-        // It shows "Current Streak: X days". We will rely on a future backend to truly calculate this accurately.
-        // For now, let's just manage the visual of the streak number.
-
-        // Placeholder for real streak. The span will show whatever is in localStorage.
-        // A truly robust streak needs server-side logic:
-        // When is_active becomes false: record completion time.
-        // A daily job or check: "Did user complete all tasks due today AND yesterday?"
-
-        // For now, let's display a hardcoded streak if `totalTasksTodayCount` is 0.
-        // Or we can just display the number we get from localStorage.
-        // Let's just update the value from localStorage and leave the complex logic for later.
-        currentStreakSpan.textContent = storedStreak;
-        currentStreakSpan.classList.remove('broken'); // Reset broken class
-        if (storedStreak === 0 && (totalTasksTodayCount > 0 || completedTodayCount > 0)) {
-            // if there are tasks for today, but streak is 0, it means it was just reset
-            // or no tasks were completed yesterday.
-        } else if (storedStreak > 0 && totalTasksTodayCount === completedTodayCount && totalTasksTodayCount > 0) {
-            // Streak might continue or needs to be updated if it's a new day
-            // This is complex. Let's just make the streak number appear and leave its accuracy for the backend.
+        // Update displayed streak
+        currentStreakSpan.textContent = currentStreak;
+        if (currentStreak === 0) {
+             currentStreakSpan.classList.add('broken');
+        } else {
+             currentStreakSpan.classList.remove('broken');
         }
     }
 
@@ -351,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskId = taskItem.dataset.id;
                 const newName = taskNameInput.value.trim();
                 const newCategory = taskCategoryInput.value.trim();
-                const newDueDate = taskDueDateInput.value; // YYYY-MM-DD
+                const newDueDate = taskDueDateInput.value; //YYYY-MM-DD
                 const newDueTime = taskDueTimeInput.value; // HH:MM
 
                 if (newName === '') {
@@ -466,27 +423,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Fun Fact Functions ---
-    const funFacts = [
-        "A group of owls is called a parliament.",
-        "Honey never spoils.",
-        "The shortest war in history lasted only 38 minutes.",
-        "Butterflies taste with their feet.",
-        "It is impossible for most people to lick their own elbow.",
-        "A jiffy is an actual unit of time: 1/100th of a second.",
-        "The unicorn is the national animal of Scotland.",
-        "Octopuses have three hearts.",
-        "A 'butt' is a real measurement of wine (126 gallons).",
-        "The oldest known living tree is over 5,000 years old.",
-        "There are more stars in the universe than grains of sand on all the beaches on Earth.",
-        "It rains diamonds on Saturn and Jupiter.",
-        "A group of pugs is called a grumble.",
-        "The national anthem of Spain has no words.",
-        "The average person walks the equivalent of three times around the world in a lifetime."
-    ];
+    // Removed local 'funFacts' array and 'usedFactIndices' array
 
-    function generateFunFact() {
-        const randomIndex = Math.floor(Math.random() * funFacts.length);
-        funFactDisplay.textContent = funFacts[randomIndex];
+    async function generateFunFact() {
+        funFactDisplay.textContent = "Loading a cool fact..."; // Provide immediate feedback
+        try {
+            const response = await fetch(USELESS_FACTS_API_URL); // Use the new API URL
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status} - ${errorText || response.statusText}`);
+            }
+            const data = await response.json(); // This API returns JSON
+            if (data && data.text) { // The fact is in the 'text' property of the JSON
+                funFactDisplay.textContent = data.text;
+            } else {
+                funFactDisplay.textContent = "Fact found, but content is empty.";
+            }
+        } catch (error) {
+            console.error('Error fetching fun fact:', error);
+            funFactDisplay.textContent = "Oops! Couldn't load a fact. Check your internet or try again!";
+        }
     }
 
     // --- API Interaction Functions (Talking to the Backend) ---
@@ -537,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveButton.addEventListener('click', async () => {
             const name = modalTaskName.value.trim();
             const category = modalTaskCategory.value.trim() || 'Uncategorized';
-            const dueDate = modalDueDate.value; // YYYY-MM-DD
+            const dueDate = modalDueDate.value; //YYYY-MM-DD
             const dueTime = modalDueTime.value; // HH:MM
 
             if (!name) {
@@ -642,10 +598,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Basic client-side streak (needs robust backend for accuracy)
             if (newStatus === false) { // If task was just completed
                 let currentStreak = parseInt(localStorage.getItem('currentStreak')) || 0;
-                let lastStreakDate = localStorage.getItem('lastStreakDate'); // YYYY-MM-DD
+                let lastStreakDate = localStorage.getItem('lastStreakDate'); //YYYY-MM-DD
 
                 const today = new Date();
-                const todayStr = today.toISOString().substring(0, 10); // YYYY-MM-DD
+                const todayStr = today.toISOString().substring(0, 10); //YYYY-MM-DD
 
                 if (!lastStreakDate) { // First completion ever
                     currentStreak = 1;
@@ -702,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchAndRenderTasks();
 
         } catch (error) {
-            console.error('Error deleting task:', error);
+                console.error('Error deleting task:', error);
             alert('Failed to delete task. Please try again.');
         }
     }
@@ -725,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCalendar();
     updateClock();
     setInterval(updateClock, 1000);
-    generateFunFact();
+    generateFunFact(); // Generate a fact on initial load too!
 
     // Re-render tasks every minute to update "due soon" / "overdue" status
     // and daily summary

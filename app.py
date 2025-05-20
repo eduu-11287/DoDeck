@@ -3,8 +3,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import datetime
-# Removed: from flask_apscheduler import APScheduler
-# Removed: from flask_mail import Mail, Message
+
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -15,13 +14,10 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tasks.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # New: Add a secret key for Flask sessions (important for production)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_super_secret_key_for_dev') # REPLACE THIS FOR PROD!
-
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 db = SQLAlchemy(app)
 CORS(app)
 
-# Removed: Flask-APScheduler configuration and initialization
-# Removed: Flask-Mail configuration and initialization
 
 @app.route('/')
 def index():
@@ -36,7 +32,7 @@ class Task(db.Model):
     time_left = db.Column(db.String(20), nullable=True)
     due_date = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
-    # Removed: notification_sent_date field
+    
 
     def __repr__(self):
         return f'<Task {self.id}: {self.name} ({self.category}) - Active: {self.is_active} - Due: {self.due_date} - Completed: {self.completed_at}>'
@@ -132,13 +128,9 @@ def delete_task(task_id):
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"}), 200
 
-# Removed: send_task_notifications function
-# Removed: scheduler initialization from __name__ == '__main__'
 
 if __name__ == '__main__':
-    # For initial DB setup or re-creating it for testing.
-    # In production, you'd typically manage DB creation/migrations separately.
     with app.app_context():
         db.create_all() # This will create tables if they don't exist
 
-    app.run(debug=True, port=5555)
+    app.run()

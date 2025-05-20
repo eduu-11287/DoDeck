@@ -777,3 +777,156 @@ body {
     flex-direction: column; /* Stack name, category, buttons vertically */
     align-items: flex-start; /* Align contents to start */
 }
+
+/* Styles for Due Dates & Statuses */
+.task-due-date {
+    font-size: 0.85em;
+    color: #00e600; /* Default due date color (slightly darker green) */
+    margin-top: 5px; /* Space from category */
+    font-weight: 500;
+}
+
+.task-item.due-soon .task-due-date {
+    color: #FFC107; /* Orange/Yellow for tasks due soon */
+    font-weight: bold;
+}
+
+.task-item.overdue .task-due-date {
+    color: #FF0000; /* Red for overdue tasks */
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.task-item.overdue {
+    border: 1px solid rgba(255, 0, 0, 0.3); /* Subtle red border */
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2); /* Red glow */
+}
+
+
+/* Styles for Add Task Modal (new structure) */
+.add-task-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top */
+}
+
+.add-task-modal {
+    background-color: #1a1a1a; /* Dark background */
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.3); /* Neon green glow */
+    width: 90%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Space between elements */
+}
+
+.add-task-modal h3 {
+    color: #00FF00;
+    font-size: 1.8em;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.add-task-modal input[type="text"],
+.add-task-modal input[type="date"],
+.add-task-modal input[type="time"] {
+    background-color: #2a2a2a;
+    border: 1px solid #00FF00;
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-size: 1em;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-task-modal input[type="text"]::placeholder,
+.add-task-modal input[type="date"]::placeholder,
+.add-task-modal input[type="time"]::placeholder {
+    color: #888;
+}
+
+.add-task-modal input[type="text"]:focus,
+.add-task-modal input[type="date"]:focus,
+.add-task-modal input[type="time"]:focus {
+    outline: none;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+}
+
+/* Specific styling for date/time inputs for consistency */
+.add-task-modal input[type="date"],
+.add-task-modal input[type="time"] {
+    appearance: none; /* Remove default browser styling */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+}
+/* Style for the calendar/clock icon in date/time input */
+.add-task-modal input[type="date"]::-webkit-calendar-picker-indicator,
+.add-task-modal input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* Make icon visible on dark background */
+    cursor: pointer;
+}
+
+.add-task-modal-actions {
+    display: flex;
+    justify-content: flex-end; /* Align buttons to the right */
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.add-task-modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.add-task-modal-actions .save-btn {
+    background-color: #00FF00;
+    color: #1a1a1a;
+}
+
+.add-task-modal-actions .save-btn:hover {
+    background-color: #00e600;
+    transform: translateY(-1px);
+}
+
+.add-task-modal-actions .cancel-btn {
+    background-color: #444;
+    color: #fff;
+}
+
+.add-task-modal-actions .cancel-btn:hover {
+    background-color: #555;
+    transform: translateY(-1px);
+}
+
+/* Mobile responsiveness for modal */
+@media (max-width: 480px) {
+    .add-task-modal {
+        padding: 20px;
+        gap: 10px;
+    }
+    .add-task-modal h3 {
+        font-size: 1.5em;
+    }
+    .add-task-modal input {
+        padding: 10px;
+    }
+    .add-task-modal-actions button {
+        padding: 8px 15px;
+    }
+}

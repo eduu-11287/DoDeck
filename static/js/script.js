@@ -45,15 +45,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Function to format due date for display
+    function formatDueDate(isoDateString) {
+        if (!isoDateString) return '';
+        const date = new Date(isoDateString);
+        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        return date.toLocaleDateString(undefined, options);
+    }
+
+    // Function to check due date status
+    function getDueDateStatus(isoDateString) {
+        if (!isoDateString) return '';
+
+        const dueDate = new Date(isoDateString);
+        const now = new Date();
+
+        // Calculate difference in milliseconds
+        const diffMs = dueDate.getTime() - now.getTime();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+
+        if (diffMs < 0) {
+            return 'overdue';
+        } else if (diffMs < oneDayMs) { // Less than 24 hours until due
+            return 'due-soon';
+        }
+        return '';
+    }
+
     // Function to render (display) all tasks
     function renderTasks(tasksToDisplay) {
         taskListDiv.innerHTML = ''; // Clear existing tasks before re-rendering
 
-        // Sort tasks: active first, then completed
+        // Sort tasks: active first, then completed. Among active, sort by due date.
         const sortedTasks = [...tasksToDisplay].sort((a, b) => {
+            // Sort by active status first
             if (a.isActive && !b.isActive) return -1;
             if (!a.isActive && b.isActive) return 1;
-            return 0;
+
+            // If both are active or both are inactive, sort by due date
+            if (a.dueDate && b.dueDate) {
+                return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+            }
+            if (a.dueDate) return -1; // tasks with due date come before tasks without
+            if (b.dueDate) return 1;
+            return 0; // Maintain original order if no due dates
         });
 
         sortedTasks.forEach(task => {
@@ -62,12 +97,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!task.isActive) {
                 taskItem.classList.add('completed');
             }
+
+            const dueDateStatus = getDueDateStatus(task.dueDate);
+            if (dueDateStatus) {
+                taskItem.classList.add(dueDateStatus);
+            }
+
             taskItem.dataset.id = task.id; // Store the task ID on the element
+
+            const displayDueDate = formatDueDate(task.dueDate);
 
             taskItem.innerHTML = `
                 <div class="task-info">
                     <span class="task-name">${task.name}</span>
                     <span class="task-category">${task.category}</span>
+                    ${displayDueDate ? `<span class="task-due-date">Due: ${displayDueDate}</span>` : ''}
                 </div>
                 <div class="task-status">
                     ${task.isActive && task.timeLeft ? `<span class="time-left">${task.timeLeft}</span>` : ''}
@@ -78,6 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="edit-mode-container" style="display: none;">
                     <input type="text" class="edit-input task-name-input" value="${task.name}">
                     <input type="text" class="edit-input task-category-input" value="${task.category}">
+                    <input type="date" class="edit-input task-due-date-input" value="${task.dueDate ? task.dueDate.substring(0, 10) : ''}">
+                    <input type="time" class="edit-input task-due-time-input" value="${task.dueDate ? task.dueDate.substring(11, 16) : ''}">
                     <div class="edit-actions">
                         <button class="edit-save-btn">Save</button>
                         <button class="edit-cancel-btn">Cancel</button>
@@ -100,11 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // --- Edit Functionality Event Listeners ---
-            const taskNameSpan = taskItem.querySelector('.task-name');
-            const taskCategorySpan = taskItem.querySelector('.task-category');
+            const taskInfoDiv = taskItem.querySelector('.task-info'); // Click anywhere in task-info to edit
             const editModeContainer = taskItem.querySelector('.edit-mode-container');
             const taskNameInput = taskItem.querySelector('.task-name-input');
             const taskCategoryInput = taskItem.querySelector('.task-category-input');
+            const taskDueDateInput = taskItem.querySelector('.task-due-date-input');
+            const taskDueTimeInput = taskItem.querySelector('.task-due-time-input');
             const saveBtn = taskItem.querySelector('.edit-save-btn');
             const cancelBtn = taskItem.querySelector('.edit-cancel-btn');
 
@@ -123,18 +170,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 editModeContainer.style.display = 'none'; // Hide the edit container
             };
 
-            taskNameSpan.addEventListener('click', enterEditMode);
-            taskCategorySpan.addEventListener('click', enterEditMode);
+            taskInfoDiv.addEventListener('click', enterEditMode); // Click on entire task-info to edit
 
             saveBtn.addEventListener('click', async () => {
                 const taskId = taskItem.dataset.id;
                 const newName = taskNameInput.value.trim();
                 const newCategory = taskCategoryInput.value.trim();
+                const newDueDate = taskDueDateInput.value; // YYYY-MM-DD
+                const newDueTime = taskDueTimeInput.value; // HH:MM
+
                 if (newName === '') {
                     alert('Task name cannot be empty!');
                     return;
                 }
-                await updateTask(taskId, { name: newName, category: newCategory });
+
+                let combinedDueDate = null;
+                if (newDueDate && newDueTime) {
+                    combinedDueDate = `${newDueDate}T${newDueTime}:00`; // YYYY-MM-DDTHH:MM:SS format
+                } else if (newDueDate) {
+                    combinedDueDate = `${newDueDate}T00:00:00`; // Default to start of day if only date is provided
+                }
+
+                await updateTask(taskId, { name: newName, category: newCategory, dueDate: combinedDueDate });
                 exitEditMode(); // Exit edit mode after saving
             });
 
@@ -142,26 +199,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Revert inputs to original values if needed (though fetchAndRender will do this)
                 taskNameInput.value = task.name;
                 taskCategoryInput.value = task.category;
+                taskDueDateInput.value = task.dueDate ? task.dueDate.substring(0, 10) : '';
+                taskDueTimeInput.value = task.dueDate ? task.dueDate.substring(11, 16) : '';
                 exitEditMode();
             });
 
             // Keyboard shortcuts for saving/canceling while editing
             taskNameInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault(); // Prevent new line
-                    saveBtn.click();
-                } else if (e.key === 'Escape') {
-                    exitEditMode();
-                }
+                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+                else if (e.key === 'Escape') { exitEditMode(); }
             });
-
             taskCategoryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveBtn.click();
-                } else if (e.key === 'Escape') {
-                    exitEditMode();
-                }
+                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+                else if (e.key === 'Escape') { exitEditMode(); }
+            });
+            taskDueDateInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+                else if (e.key === 'Escape') { exitEditMode(); }
+            });
+            taskDueTimeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+                else if (e.key === 'Escape') { exitEditMode(); }
             });
         });
 
@@ -271,37 +329,97 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function addTask() {
-        const taskName = prompt('Enter new task name:'); // Still using prompt for adding for simplicity
-        if (!taskName) return;
+    // Function to show the add task modal
+    function showAddTaskModal() {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.classList.add('add-task-modal-overlay');
+        modalOverlay.innerHTML = `
+            <div class="add-task-modal">
+                <h3>Add New Task</h3>
+                <input type="text" id="modal-task-name" placeholder="Task Name" required>
+                <input type="text" id="modal-task-category" placeholder="Category (e.g., Work)">
+                <input type="date" id="modal-due-date">
+                <input type="time" id="modal-due-time">
+                <div class="add-task-modal-actions">
+                    <button class="cancel-btn">Cancel</button>
+                    <button class="save-btn">Add Task</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalOverlay);
 
-        const taskCategory = prompt('Enter task category (e.g., School, Work, Personal):');
+        const modalTaskName = document.getElementById('modal-task-name');
+        const modalTaskCategory = document.getElementById('modal-task-category');
+        const modalDueDate = document.getElementById('modal-due-date');
+        const modalDueTime = document.getElementById('modal-due-time');
+        const saveButton = modalOverlay.querySelector('.save-btn');
+        const cancelButton = modalOverlay.querySelector('.cancel-btn');
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/tasks`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: taskName,
-                    category: taskCategory || 'Uncategorized',
-                }),
-            });
+        modalTaskName.focus(); // Focus on the first input
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+        // Event listener for adding task
+        saveButton.addEventListener('click', async () => {
+            const name = modalTaskName.value.trim();
+            const category = modalTaskCategory.value.trim() || 'Uncategorized';
+            const dueDate = modalDueDate.value; // YYYY-MM-DD
+            const dueTime = modalDueTime.value; // HH:MM
+
+            if (!name) {
+                alert('Task name is required!');
+                return;
             }
 
-            await fetchAndRenderTasks();
+            let combinedDueDate = null;
+            if (dueDate && dueTime) {
+                combinedDueDate = `${dueDate}T${dueTime}:00`; // ISO format: YYYY-MM-DDTHH:MM:SS
+            } else if (dueDate) {
+                combinedDueDate = `${dueDate}T00:00:00`; // Default to start of day if only date is provided
+            }
 
-        } catch (error) {
-            console.error('Error adding task:', error);
-            alert('Failed to add task. Please try again.');
-        }
+            try {
+                const response = await fetch(`${BACKEND_URL}/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        category: category,
+                        dueDate: combinedDueDate, // Send combined due date
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                modalOverlay.remove(); // Close modal
+                await fetchAndRenderTasks(); // Refresh tasks
+
+            } catch (error) {
+                console.error('Error adding task:', error);
+                alert('Failed to add task. Please try again.');
+            }
+        });
+
+        // Event listener for cancelling
+        cancelButton.addEventListener('click', () => {
+            modalOverlay.remove();
+        });
+
+        // Close modal on outside click
+        modalOverlay.addEventListener('click', (event) => {
+            if (event.target === modalOverlay) {
+                modalOverlay.remove();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && document.body.contains(modalOverlay)) {
+                modalOverlay.remove();
+            }
+        });
     }
 
-    // New: Function to update task data
     async function updateTask(id, updates) {
         try {
             const response = await fetch(`${BACKEND_URL}/tasks/${id}`, {
@@ -336,8 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const newStatus = !taskToUpdate.isActive;
-
-            // Use the new updateTask function
             await updateTask(id, { isActive: newStatus });
 
         } catch (error) {
@@ -369,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
-    addtaskButton.addEventListener('click', addTask);
+    addtaskButton.addEventListener('click', showAddTaskModal); // Changed to show modal
 
     prevMonthBtn.addEventListener('click', () => changeMonth(-1));
     nextMonthBtn.addEventListener('click', () => changeMonth(1));
@@ -387,4 +503,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateClock();
     setInterval(updateClock, 1000);
     generateFunFact();
+
+    // Re-render tasks every minute to update "due soon" / "overdue" status
+    // This is optional but makes the status dynamic without a page refresh
+    setInterval(fetchAndRenderTasks, 60 * 1000);
 });

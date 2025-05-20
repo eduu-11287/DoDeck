@@ -1,113 +1,120 @@
 import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS # This is crucial for allowing our frontend to talk to the backend
+from flask_cors import CORS
 from flask import render_template
-
+import datetime # Import datetime module
 
 # --- Configuration ---
-# Imagine these are secret notes for our app on how to run
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-app = Flask(__name__) # This creates our Flask application, like setting up our vault manager
+app = Flask(__name__)
 
-# Database Configuration (where our data lives)
-# Here we're using SQLite, which stores data in a file named 'tasks.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'tasks.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Good practice to turn this off
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app) # This connects SQLAlchemy to our Flask app, setting up our magical translator
-CORS(app) # This initializes CORS, giving permission for our frontend to talk to us
+db = SQLAlchemy(app)
+CORS(app)
 
-# Route to serve the main HTML file
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
-# --- Database Model (The blueprint for our "Task" sticky notes) ---
-# This tells SQLAlchemy how a 'Task' should look when saved in the database
+# --- Database Model ---
 class Task(db.Model):
-    id = db.Column(db.Integer, primary_key=True) # Unique number for each task
-    name = db.Column(db.String(120), nullable=False) # The task description (e.g., "Homework")
-    category = db.Column(db.String(80), nullable=True) # The category (e.g., "School")
-    is_active = db.Column(db.Boolean, default=True) # Is the task still active? (True/False)
-    time_left = db.Column(db.String(20), nullable=True) # Optional: time remaining (e.g., "20:53")
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    category = db.Column(db.String(80), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    time_left = db.Column(db.String(20), nullable=True) # Could be removed later if due_date is primary time field
+    due_date = db.Column(db.DateTime, nullable=True) # New: Store due date as DateTime object
 
     def __repr__(self):
-        # A nice way to see our Task objects if we print them
-        return f'<Task {self.id}: {self.name} ({self.category}) - Active: {self.is_active}>'
+        return f'<Task {self.id}: {self.name} ({self.category}) - Active: {self.is_active} - Due: {self.due_date}>'
 
     def to_dict(self):
-        # This function converts a Task object into a dictionary
-        # which is easy to send as JSON to our frontend
         return {
             'id': self.id,
             'name': self.name,
             'category': self.category,
-            'isActive': self.is_active, # Frontend uses 'isActive'
-            'timeLeft': self.time_left
+            'isActive': self.is_active,
+            'timeLeft': self.time_left, # Keep for now, might transition to only using due_date
+            'dueDate': self.due_date.isoformat() if self.due_date else None # New: Convert DateTime to ISO format string
         }
 
-# --- API Routes (These are the specific "doorways" our frontend will use to talk to the backend) ---
+# --- API Routes ---
 
-# Route to create the database tables
+# IMPORTANT: You need to re-initialize your database after this change!
+# 1. Stop your Flask app.
+# 2. Delete the 'tasks.db' file in your project directory.
+# 3. Run the /init-db route once.
+# 4. Then restart your app normally.
 @app.route('/init-db')
 def init_db():
     with app.app_context():
-        db.create_all() # This command tells SQLAlchemy to create all tables defined in our models
-    return jsonify({"message": "Database tables created!"}), 200
+        db.drop_all() # Optional: Drops existing tables first to ensure clean recreate
+        db.create_all()
+    return jsonify({"message": "Database tables (re)created!"}), 200
 
-# Route to get all tasks (READ operation)
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
-    tasks = Task.query.all() # Get all task sticky notes from the database
-    return jsonify([task.to_dict() for task in tasks]) # Convert them to dictionaries and send as JSON
+    tasks = Task.query.all()
+    return jsonify([task.to_dict() for task in tasks])
 
-# Route to add a new task (CREATE operation)
 @app.route('/tasks', methods=['POST'])
 def add_task():
-    data = request.get_json() # Get the data (new task info) that the frontend sent us
+    data = request.get_json()
     new_task = Task(
         name=data['name'],
-        category=data.get('category', 'Uncategorized'), # If no category, use 'Uncategorized'
-        is_active=True, # New tasks are always active
+        category=data.get('category', 'Uncategorized'),
+        is_active=True,
         time_left=data.get('timeLeft')
     )
-    db.session.add(new_task) # Add the new task to our database "session" (like preparing to save)
-    db.session.commit() # Save the task permanently to the database!
-    return jsonify(new_task.to_dict()), 201 # Send back the new task's info and a 'Created' status code
+    # New: Handle due_date from incoming data
+    if 'dueDate' in data and data['dueDate']:
+        try:
+            # Assuming dueDate comes as "YYYY-MM-DDTHH:MM:SS" or "YYYY-MM-DDTHH:MM"
+            # Python's datetime.fromisoformat() is robust
+            new_task.due_date = datetime.datetime.fromisoformat(data['dueDate'])
+        except ValueError:
+            return jsonify({"error": "Invalid due date format"}), 400
 
-# Route to update a task (UPDATE operation)
+    db.session.add(new_task)
+    db.session.commit()
+    return jsonify(new_task.to_dict()), 201
+
 @app.route('/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
-    task = Task.query.get_or_404(task_id) # Find the task by its ID, or say "not found" if it doesn't exist
-    data = request.get_json() # Get the updated info from the frontend
+    task = Task.query.get_or_404(task_id)
+    data = request.get_json()
 
-    # Update the task's properties based on what the frontend sent
     if 'name' in data:
         task.name = data['name']
     if 'category' in data:
         task.category = data['category']
-    if 'isActive' in data: # Frontend uses 'isActive', backend uses 'is_active'
+    if 'isActive' in data:
         task.is_active = data['isActive']
     if 'timeLeft' in data:
         task.time_left = data['timeLeft']
+    # New: Handle due_date update
+    if 'dueDate' in data: # Check if key exists (even if None)
+        if data['dueDate']: # If it's not None, try to parse
+            try:
+                task.due_date = datetime.datetime.fromisoformat(data['dueDate'])
+            except ValueError:
+                return jsonify({"error": "Invalid due date format"}), 400
+        else: # If it's None, set due_date to None
+            task.due_date = None
 
-    db.session.commit() # Save the updated task permanently
-    return jsonify(task.to_dict()) # Send back the updated task's info
+    db.session.commit()
+    return jsonify(task.to_dict())
 
-# Route to delete a task (DELETE operation)
 @app.route('/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
-    task = Task.query.get_or_404(task_id) # Find the task by its ID
-    db.session.delete(task) # Mark the task for deletion
-    db.session.commit() # Delete the task permanently
-    return jsonify({"message": "Task deleted successfully"}), 200 # Send a confirmation message
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify({"message": "Task deleted successfully"}), 200
 
-# --- Running the Flask App ---
 if __name__ == '__main__':
-    # This ensures that our virtual environment is active before running.
-    # It's generally better to run `flask run` from the terminal.
-    # But for a simple direct run, this works.
-    app.run(debug=True, port=5555) # Run the app! debug=True helps us see errors
+    app.run(debug=True, port=5555)

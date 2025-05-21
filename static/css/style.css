@@ -961,6 +961,115 @@ body {
     transform: translateY(-2px);
 }
 
+/* --- Authentication Overlay and Modal Styles --- */
+.auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Darker overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top of everything */
+}
+
+.auth-modal {
+    background-color: #1a1a1a; /* Dark background for the modal */
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 0 40px rgba(0, 255, 0, 0.4); /* Stronger neon green glow */
+    width: 90%;
+    max-width: 450px; /* Max width for the modal */
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Space between elements */
+}
+
+.auth-modal h2 {
+    color: #00FF00; /* Neon green for main title */
+    font-size: 2.2em;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+}
+
+.auth-modal p {
+    color: #ccc;
+    font-size: 1.1em;
+    margin-bottom: 20px;
+}
+
+.auth-form h3 {
+    color: #fff;
+    font-size: 1.6em;
+    margin-bottom: 15px;
+}
+
+.auth-form input[type="text"],
+.auth-form input[type="password"] {
+    background-color: #2a2a2a; /* Darker input background */
+    border: 1px solid #00FF00; /* Neon green border */
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    width: calc(100% - 40px); /* Adjust width for padding */
+    margin-bottom: 15px;
+    box-sizing: border-box; /* Include padding in width */
+}
+
+.auth-form input[type="text"]::placeholder,
+.auth-form input[type="password"]::placeholder {
+    color: #888;
+}
+
+.auth-form input[type="text"]:focus,
+.auth-form input[type="password"]:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+}
+
+.auth-form button {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.auth-form button:hover {
+    background-color: #00e600;
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.auth-toggle {
+    color: #ccc;
+    font-size: 0.95em;
+    margin-top: 15px;
+}
+
+.auth-toggle a {
+    color: #00FF00; /* Neon green link */
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s;
+}
+
+.auth-toggle a:hover {
+    color: #00e600;
+    text-decoration: underline;
+}
+
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     body {
@@ -1051,6 +1160,29 @@ body {
     #generate-fact-button {
         margin-top: 15px;
     }
+
+    /* Auth Modal Mobile Adjustments */
+    .auth-modal {
+        padding: 25px;
+        gap: 15px;
+    }
+    .auth-modal h2 {
+        font-size: 1.8em;
+    }
+    .auth-modal p {
+        font-size: 1em;
+    }
+    .auth-form h3 {
+        font-size: 1.4em;
+    }
+    .auth-form input {
+        padding: 12px 15px;
+        font-size: 1em;
+    }
+    .auth-form button {
+        padding: 12px 25px;
+        font-size: 1.1em;
+    }
 }
 
 /* Even smaller screens (e.g., very small phones) */
@@ -1091,5 +1223,28 @@ body {
     .label-item {
         padding: 10px 12px;
         margin-bottom: 10px;
+    }
+
+    /* Auth Modal for very small screens */
+    .auth-modal {
+        padding: 20px;
+        gap: 10px;
+    }
+    .auth-modal h2 {
+        font-size: 1.5em;
+    }
+    .auth-modal p {
+        font-size: 0.9em;
+    }
+    .auth-form h3 {
+        font-size: 1.2em;
+    }
+    .auth-form input {
+        padding: 10px 12px;
+        font-size: 0.9em;
+    }
+    .auth-form button {
+        padding: 10px 20px;
+        font-size: 1em;
     }
 }

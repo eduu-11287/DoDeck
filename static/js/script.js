@@ -48,31 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Welcome Message Element (moved to middle panel)
     const welcomeMessageDiv = document.getElementById('welcome-message');
 
-    // New Pomodoro Timer Elements
-    const pomodoroDisplay = document.getElementById('pomodoro-display');
-    const pomodoroHoursInput = document.getElementById('pomodoro-hours-input');
-    const pomodoroMinutesInput = document.getElementById('pomodoro-minutes-input');
-    const pomodoroSetBtn = document.getElementById('pomodoro-set-btn');
-    const pomodoroStartBtn = document.getElementById('pomodoro-start-btn');
-    const pomodoroPauseBtn = document.getElementById('pomodoro-pause-btn');
-    const pomodoroStopBtn = document.getElementById('pomodoro-stop-btn'); // Changed from reset
-    const pomodoroStatus = document.getElementById('pomodoro-status');
-
     let currentCalendarDate = new Date(); // Keep track of the month currently displayed in the calendar
     let is12HourFormat = timeFormatSelect.value === '12';
-
-    // --- Pomodoro Timer Variables ---
-    let timerInterval;
-    let timeLeft = 0; // Initialize to 0, will be set by user
-    let initialTime = 0; // Store the time set by the user
-    let isPaused = true;
-    let isRunning = false; // New state to track if timer is actively running
-    let pomodoroMode = 'custom'; // Now it's a custom timer, not just pomodoro cycles
 
     // --- Sound Effects ---
     // Ensure you have a 'ding.mp3' in your static/sounds/ directory
     const completeSound = new Audio('static/sounds/ding.mp3');
-    const timerEndSound = new Audio('static/sounds/bell.mp3'); // Assuming you have a bell sound for timer end
 
     // --- Helper Functions ---
 
@@ -159,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const yesterday = new Date(today);
                 yesterday.setDate(today.getDate() - 1);
-                yesterday.setHours(0,0,0,0);
+                yesterstoday.setHours(0,0,0,0);
 
                 if (lastDateObj.getTime() === yesterday.getTime()) {
                     currentStreak++;
@@ -324,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveBtn.addEventListener('click', async () => {
                 const taskId = taskItem.dataset.id;
                 const newName = taskNameInput.value.trim();
-                const newCategory = taskCategoryInput.value.trim() || 'Uncategorized';
+                const newCategory = taskCategoryInput.value.trim();
                 const newDueDate = taskDueDateInput.value;
                 const newDueTime = taskDueTimeInput.value;
 
@@ -808,106 +789,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Custom Timer Logic ---
-    function formatTime(seconds) {
-        const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-        const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-        const s = String(seconds % 60).padStart(2, '0');
-        return `${h}:${m}:${s}`;
-    }
-
-    function updatePomodoroDisplay() {
-        pomodoroDisplay.textContent = formatTime(timeLeft);
-    }
-
-    function setTimer() {
-        const hours = parseInt(pomodoroHoursInput.value) || 0;
-        const minutes = parseInt(pomodoroMinutesInput.value) || 0;
-
-        if (hours === 0 && minutes === 0) {
-            alert('Please set a valid time (hours or minutes must be greater than zero).');
-            return;
-        }
-
-        timeLeft = (hours * 3600) + (minutes * 60);
-        initialTime = timeLeft; // Store initial time for reset
-        updatePomodoroDisplay();
-        pomodoroStatus.textContent = 'Timer set. Ready to start!';
-
-        // Enable/disable buttons appropriately
-        pomodoroStartBtn.disabled = false;
-        pomodoroPauseBtn.disabled = true;
-        pomodoroStopBtn.disabled = false;
-        pomodoroHoursInput.disabled = true;
-        pomodoroMinutesInput.disabled = true;
-        pomodoroSetBtn.disabled = true;
-    }
-
-    function startTimer() {
-        if (isRunning) return; // Already running
-        if (timeLeft <= 0) {
-            setTimer(); // If timer is at 0, set it first based on inputs
-            if (timeLeft <= 0) return; // If still 0 after setting, something is wrong with inputs
-        }
-
-        isRunning = true;
-        isPaused = false;
-        pomodoroStartBtn.disabled = true;
-        pomodoroPauseBtn.disabled = false;
-        pomodoroStopBtn.disabled = false;
-        pomodoroStatus.textContent = 'Timer running...';
-
-        timerInterval = setInterval(() => {
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                timerEndSound.play();
-                handleTimerEnd();
-            } else {
-                timeLeft--;
-                updatePomodoroDisplay();
-            }
-        }, 1000);
-    }
-
-    function pauseTimer() {
-        if (!isRunning || isPaused) return; // Not running or already paused
-        isPaused = true;
-        clearInterval(timerInterval);
-        pomodoroStartBtn.disabled = false;
-        pomodoroPauseBtn.disabled = true;
-        pomodoroStatus.textContent = 'Timer paused.';
-    }
-
-    function stopTimer() {
-        clearInterval(timerInterval);
-        isRunning = false;
-        isPaused = true;
-        timeLeft = initialTime; // Reset to the initially set time
-        updatePomodoroDisplay();
-        pomodoroStatus.textContent = 'Timer stopped. Ready to start again or set new time.';
-
-        // Re-enable input fields and set button
-        pomodoroHoursInput.disabled = false;
-        pomodoroMinutesInput.disabled = false;
-        pomodoroSetBtn.disabled = false;
-        pomodoroStartBtn.disabled = true; // Cannot start until set or if already running
-        pomodoroPauseBtn.disabled = true;
-        pomodoroStopBtn.disabled = true;
-    }
-
-    function handleTimerEnd() {
-        isRunning = false;
-        isPaused = true;
-        pomodoroStatus.textContent = 'Time\'s up!';
-        // After timer ends, allow user to start again or set new time
-        pomodoroStartBtn.disabled = false;
-        pomodoroPauseBtn.disabled = true;
-        pomodoroStopBtn.disabled = false; // Allow stopping to reset inputs
-        pomodoroHoursInput.disabled = false;
-        pomodoroMinutesInput.disabled = false;
-        pomodoroSetBtn.disabled = false;
-    }
-
 
     // --- Initial Check and Event Listeners ---
 
@@ -972,18 +853,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     generateFactButton.addEventListener('click', generateFunFact);
-
-    // Custom Timer Event Listeners
-    pomodoroSetBtn.addEventListener('click', setTimer);
-    pomodoroStartBtn.addEventListener('click', startTimer);
-    pomodoroPauseBtn.addEventListener('click', pauseTimer);
-    pomodoroStopBtn.addEventListener('click', stopTimer); // Changed from reset
-
-    // Initial setup for Custom timer
-    setTimer(); // Set initial display based on input values (00:25)
-    pomodoroStartBtn.disabled = true; // Start button disabled until set or if already running
-    pomodoroPauseBtn.disabled = true; // Pause button disabled initially
-    pomodoroStopBtn.disabled = true; // Stop button disabled initially
 
 
     // Initial checks and setup

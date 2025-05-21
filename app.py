@@ -69,9 +69,11 @@ class Task(db.Model):
     time_left = db.Column(db.String(20), nullable=True)
     due_date = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
+
     # user_id is a foreign key linking tasks to users
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
+    # user_id is a foreign key linking tasks to users
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     def __repr__(self):
         return f'<Task {self.id}: {self.name} (User: {self.user_id}) - Active: {self.is_active} - Due: {self.due_date} - Completed: {self.completed_at}>'
 

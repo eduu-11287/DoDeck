@@ -45,8 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const tasksTotalTodaySpan = document.getElementById('tasks-total-today');
     const currentStreakSpan = document.getElementById('current-streak');
 
-    // New Welcome Message Element
+    // Welcome Message Element (moved to middle panel)
     const welcomeMessageDiv = document.getElementById('welcome-message');
+
+    // New AI Brainstormer Elements
+    const aiTaskInput = document.getElementById('ai-task-input');
+    const aiBrainstormButton = document.getElementById('ai-brainstorm-button');
+    const aiSuggestionsOutput = document.getElementById('ai-suggestions-output');
+    const aiLoadingIndicator = document.getElementById('ai-loading-indicator');
+
 
     let currentCalendarDate = new Date(); // Keep track of the month currently displayed in the calendar
     let is12HourFormat = timeFormatSelect.value === '12';
@@ -789,6 +796,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- New AI Brainstormer Logic ---
+    async function brainstormTasks() {
+        const mainTask = aiTaskInput.value.trim();
+        if (!mainTask) {
+            alert('Please enter a task to brainstorm!');
+            return;
+        }
+
+        aiSuggestionsOutput.innerHTML = ''; // Clear previous suggestions
+        aiLoadingIndicator.style.display = 'block'; // Show loading indicator
+        aiBrainstormButton.disabled = true; // Disable button during loading
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/ai-brainstorm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mainTask: mainTask }),
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) { alert('You need to be logged in to use the AI brainstormer.'); showAuthOverlay(); }
+                const errorText = await response.text();
+                console.error('Error brainstorming tasks:', errorText);
+                throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
+            }
+
+            const data = await response.json();
+            if (data && data.sub_tasks && Array.isArray(data.sub_tasks)) {
+                const ul = document.createElement('ul');
+                data.sub_tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.textContent = task;
+                    ul.appendChild(li);
+                });
+                aiSuggestionsOutput.appendChild(ul);
+            } else {
+                aiSuggestionsOutput.textContent = 'No suggestions found or unexpected format.';
+            }
+
+        } catch (error) {
+            console.error('AI Brainstorming error:', error);
+            aiSuggestionsOutput.textContent = 'Failed to generate suggestions. Please try again.';
+        } finally {
+            aiLoadingIndicator.style.display = 'none'; // Hide loading indicator
+            aiBrainstormButton.disabled = false; // Re-enable button
+        }
+    }
+
+
     // --- Initial Check and Event Listeners ---
 
     async function checkAuthenticationStatus() {
@@ -852,6 +909,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     generateFactButton.addEventListener('click', generateFunFact);
+
+    // AI Brainstormer Event Listeners
+    aiBrainstormButton.addEventListener('click', brainstormTasks);
+    aiTaskInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            brainstormTasks();
+        }
+    });
 
     // Initial checks and setup
     checkAuthenticationStatus();

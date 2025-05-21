@@ -35,7 +35,7 @@
     <div class="app-container" id="main-app-content" style="display: none;">
         <div class="panel left-panel">
             <h1 class="betterlist-logo">BETTERLIST</h1>
-            </div>
+        </div>
 
         <div class="panel middle-panel">
             <div id="welcome-message" class="welcome-message"></div>
@@ -58,6 +58,17 @@
 
             <div class="task-list">
                 </div>
+
+            <div class="ai-brainstormer-section">
+                <h3 class="ai-brainstormer-title">AI Task Brainstormer</h3>
+                <input type="text" id="ai-task-input" placeholder="Enter a big task (e.g., Plan a party)">
+                <button id="ai-brainstorm-button">Brainstorm</button>
+                <div id="ai-suggestions-output" class="ai-suggestions-output">
+                    </div>
+                <div id="ai-loading-indicator" class="ai-loading-indicator" style="display: none;">
+                    Generating ideas...
+                </div>
+            </div>
 
             <div class="task-actions-bottom">
                 <button id="logout-button" class="action-button logout-button">Logout</button>

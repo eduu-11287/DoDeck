@@ -6,6 +6,7 @@ from flask_cors import CORS
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps # Import wraps for the decorator
+import json # Import json for parsing LLM response
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -254,6 +255,85 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"}), 200
+
+# --- New AI Brainstormer Endpoint ---
+@app.route('/ai-brainstorm', methods=['POST'])
+@login_required # Ensure user is logged in
+def ai_brainstorm():
+    data = request.get_json()
+    main_task = data.get('mainTask')
+
+    if not main_task:
+        return jsonify({"error": "Main task is required for brainstorming"}), 400
+
+    try:
+        # Construct the prompt for the LLM
+        prompt = f"""Given the main task '{main_task}', break it down into 5-7 smaller, actionable sub-tasks.
+        Provide the output as a JSON array of strings, where each string is a sub-task.
+        Example:
+        [
+          "Sub-task 1",
+          "Sub-task 2",
+          "Sub-task 3"
+        ]
+        """
+
+        # Prepare the payload for the Gemini API call
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "responseSchema": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "sub_tasks": {
+                            "type": "ARRAY",
+                            "items": {"type": "STRING"}
+                        }
+                    },
+                    "required": ["sub_tasks"]
+                }
+            }
+        }
+
+        # The API key is automatically provided by the Canvas environment if left empty.
+        api_key = ""
+        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+
+        # Make the fetch call to the Gemini API
+        # Using requests library for Python backend
+        import requests
+        response = requests.post(api_url, json=payload)
+        response.raise_for_status() # Raise an exception for HTTP errors
+
+        result = response.json()
+
+        # Parse the LLM's structured response
+        if result.get('candidates') and len(result['candidates']) > 0 and \
+           result['candidates'][0].get('content') and result['candidates'][0]['content'].get('parts') and \
+           len(result['candidates'][0]['content']['parts']) > 0:
+            
+            llm_text_response = result['candidates'][0]['content']['parts'][0]['text']
+            
+            # The LLM is instructed to return JSON, so we parse it directly
+            parsed_llm_response = json.loads(llm_text_response)
+            
+            if 'sub_tasks' in parsed_llm_response and isinstance(parsed_llm_response['sub_tasks'], list):
+                return jsonify({"sub_tasks": parsed_llm_response['sub_tasks']}), 200
+            else:
+                return jsonify({"error": "LLM response did not contain expected 'sub_tasks' array."}), 500
+        else:
+            return jsonify({"error": "Failed to get a valid response from the LLM."}), 500
+
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Error calling Gemini API: {e}")
+        return jsonify({"error": f"Failed to connect to AI service: {e}"}), 500
+    except json.JSONDecodeError as e:
+        app.logger.error(f"Error parsing LLM JSON response: {e}. Raw response: {llm_text_response}")
+        return jsonify({"error": f"Failed to parse AI response: {e}"}), 500
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred during AI brainstorming: {e}")
+        return jsonify({"error": f"An unexpected error occurred: {e}"}), 500
 
 
 if __name__ == '__main__':

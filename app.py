@@ -18,6 +18,14 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 db = SQLAlchemy(app)
 CORS(app)
 
+# For SQLAlchemy to work with PostgreSQL on Render,
+# it often needs to know about SSL options.
+# This ensures a secure connection.
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "connect_args": {
+        "sslmode": "require"
+    }
+}
 
 @app.route('/')
 def index():
@@ -134,3 +142,5 @@ if __name__ == '__main__':
         db.create_all() # This will create tables if they don't exist
 
     app.run()
+
+    # live ink of the app https://betterlist-7xgp.onrender.com

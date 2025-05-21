@@ -7,6 +7,7 @@ import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps # Import wraps for the decorator
 import json # Import json for parsing LLM response
+import requests # Import requests for making HTTP calls
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -264,18 +265,21 @@ def ai_brainstorm():
     main_task = data.get('mainTask')
 
     if not main_task:
+        app.logger.error("AI Brainstorm: No main task provided.")
         return jsonify({"error": "Main task is required for brainstorming"}), 400
 
     try:
         # Construct the prompt for the LLM
         prompt = f"""Given the main task '{main_task}', break it down into 5-7 smaller, actionable sub-tasks.
-        Provide the output as a JSON array of strings, where each string is a sub-task.
+        Provide the output as a JSON object with a single key 'sub_tasks' which is an array of strings.
         Example:
-        [
-          "Sub-task 1",
-          "Sub-task 2",
-          "Sub-task 3"
-        ]
+        {{
+          "sub_tasks": [
+            "Sub-task 1",
+            "Sub-task 2",
+            "Sub-task 3"
+          ]
+        }}
         """
 
         # Prepare the payload for the Gemini API call
@@ -300,40 +304,48 @@ def ai_brainstorm():
         api_key = ""
         api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
 
+        app.logger.info(f"AI Brainstorm: Calling Gemini API with prompt: {main_task}")
         # Make the fetch call to the Gemini API
-        # Using requests library for Python backend
-        import requests
-        response = requests.post(api_url, json=payload)
-        response.raise_for_status() # Raise an exception for HTTP errors
+        response = requests.post(api_url, json=payload, timeout=30) # Added a timeout for the request
+        response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
 
         result = response.json()
+        app.logger.info(f"AI Brainstorm: Received raw LLM response: {json.dumps(result)}")
 
+        llm_text_response = None # Initialize to None
         # Parse the LLM's structured response
         if result.get('candidates') and len(result['candidates']) > 0 and \
            result['candidates'][0].get('content') and result['candidates'][0]['content'].get('parts') and \
            len(result['candidates'][0]['content']['parts']) > 0:
             
             llm_text_response = result['candidates'][0]['content']['parts'][0]['text']
+            app.logger.info(f"AI Brainstorm: Extracted LLM text part: {llm_text_response}")
             
             # The LLM is instructed to return JSON, so we parse it directly
             parsed_llm_response = json.loads(llm_text_response)
             
             if 'sub_tasks' in parsed_llm_response and isinstance(parsed_llm_response['sub_tasks'], list):
+                app.logger.info(f"AI Brainstorm: Successfully parsed sub_tasks: {parsed_llm_response['sub_tasks']}")
                 return jsonify({"sub_tasks": parsed_llm_response['sub_tasks']}), 200
             else:
-                return jsonify({"error": "LLM response did not contain expected 'sub_tasks' array."}), 500
+                app.logger.error(f"AI Brainstorm: LLM response did not contain expected 'sub_tasks' array. Parsed: {parsed_llm_response}")
+                return jsonify({"error": "LLM response did not contain expected 'sub_tasks' array. Check server logs."}), 500
         else:
-            return jsonify({"error": "Failed to get a valid response from the LLM."}), 500
+            app.logger.error(f"AI Brainstorm: Failed to get valid candidates/content from LLM response. Raw: {json.dumps(result)}")
+            return jsonify({"error": "Failed to get a valid response from the AI service. Check server logs."}), 500
 
+    except requests.exceptions.Timeout:
+        app.logger.error(f"AI Brainstorm: Request to Gemini API timed out for task: {main_task}")
+        return jsonify({"error": "AI service request timed out. Please try again."}), 504 # Use 504 for gateway timeout
     except requests.exceptions.RequestException as e:
-        app.logger.error(f"Error calling Gemini API: {e}")
-        return jsonify({"error": f"Failed to connect to AI service: {e}"}), 500
+        app.logger.error(f"AI Brainstorm: Error calling Gemini API for task '{main_task}': {e}")
+        return jsonify({"error": f"Failed to connect to AI service: {e}. Check server logs."}), 500
     except json.JSONDecodeError as e:
-        app.logger.error(f"Error parsing LLM JSON response: {e}. Raw response: {llm_text_response}")
-        return jsonify({"error": f"Failed to parse AI response: {e}"}), 500
+        app.logger.error(f"AI Brainstorm: Error parsing LLM JSON response: {e}. Raw response text was: {llm_text_response}")
+        return jsonify({"error": f"Failed to parse AI response: {e}. Check server logs."}), 500
     except Exception as e:
-        app.logger.error(f"An unexpected error occurred during AI brainstorming: {e}")
-        return jsonify({"error": f"An unexpected error occurred: {e}"}), 500
+        app.logger.error(f"AI Brainstorm: An unexpected error occurred during AI brainstorming for task '{main_task}': {e}", exc_info=True)
+        return jsonify({"error": f"An unexpected server error occurred: {e}. Check server logs."}), 500
 
 
 if __name__ == '__main__':

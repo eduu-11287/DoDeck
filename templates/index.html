@@ -8,9 +8,33 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
+    <div class="auth-overlay" id="auth-overlay">
+        <div class="auth-modal">
+            <h2 id="auth-title">Welcome to BetterList!</h2>
+            <p id="auth-message">Please log in or register to manage your tasks.</p>
+
+            <div class="auth-form" id="login-form">
+                <h3>Login</h3>
+                <input type="text" id="login-username" placeholder="Username" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button id="login-button">Log In</button>
+                <p class="auth-toggle">New user? <a href="#" id="show-register">Register here</a></p>
+            </div>
+
+            <div class="auth-form" id="register-form" style="display: none;">
+                <h3>Register</h3>
+                <input type="text" id="register-username" placeholder="Username" required>
+                <input type="password" id="register-password" placeholder="Password" required>
+                <button id="register-button">Register</button>
+                <p class="auth-toggle">Already have an account? <a href="#" id="show-login">Log In here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="main-app-content" style="display: none;">
         <div class="panel left-panel">
             <h1 class="betterlist-logo">BETTERLIST</h1>
+            <button id="logout-button" class="logout-button">Logout</button>
         </div>
 
         <div class="panel middle-panel">

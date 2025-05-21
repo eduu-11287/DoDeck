@@ -1010,3 +1010,116 @@ body {
     0% { text-shadow: 0 0 5px rgba(0, 255, 0, 0.5); }
     100% { text-shadow: 0 0 15px rgba(0, 255, 0, 1); }
 }
+
+/* --- Authentication Overlay and Modal --- */
+.auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Dark overlay */
+    display: flex; /* Use flexbox for centering */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top of everything */
+    color: var(--text-color); /* Inherit text color */
+}
+
+.auth-modal {
+    background-color: var(--panel-background); /* Darker panel background */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); /* Green glow */
+    text-align: center;
+    width: 350px;
+    max-width: 90%;
+    border: 1px solid var(--accent-color);
+}
+
+.auth-modal h2 {
+    color: var(--accent-color);
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+.auth-modal h3 {
+    color: var(--text-color);
+    margin-bottom: 15px;
+    font-size: 1.5em;
+}
+
+.auth-modal p {
+    font-size: 0.9em;
+    margin-top: 15px;
+}
+
+.auth-modal input[type="text"],
+.auth-modal input[type="password"] {
+    width: calc(100% - 20px);
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--input-background);
+    color: var(--text-color);
+    font-size: 1em;
+}
+
+.auth-modal input[type="text"]::placeholder,
+.auth-modal input[type="password"]::placeholder {
+    color: #888;
+}
+
+
+.auth-modal button {
+    background-color: var(--accent-color);
+    color: #000; /* Black text for contrast */
+    border: none;
+    padding: 12px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.auth-modal button:hover {
+    background-color: #00e600; /* Brighter green on hover */
+    transform: translateY(-2px);
+}
+
+.auth-toggle {
+    margin-top: 20px;
+    font-size: 0.9em;
+}
+
+.auth-toggle a {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.auth-toggle a:hover {
+    text-decoration: underline;
+}
+
+/* Logout Button Styling */
+.logout-button {
+    background-color: #e74c3c; /* Red for logout */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: bold;
+    margin-top: 20px; /* Adjust spacing as needed */
+    transition: background-color 0.3s ease;
+}
+
+.logout-button:hover {
+    background-color: #c0392b;
+}

@@ -48,19 +48,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Welcome Message Element (moved to middle panel)
     const welcomeMessageDiv = document.getElementById('welcome-message');
 
-    // New AI Brainstormer Elements
-    const aiTaskInput = document.getElementById('ai-task-input');
-    const aiBrainstormButton = document.getElementById('ai-brainstorm-button');
-    const aiSuggestionsOutput = document.getElementById('ai-suggestions-output');
-    const aiLoadingIndicator = document.getElementById('ai-loading-indicator');
-
+    // New Pomodoro Timer Elements
+    const pomodoroDisplay = document.getElementById('pomodoro-display');
+    const pomodoroStartBtn = document.getElementById('pomodoro-start-btn');
+    const pomodoroPauseBtn = document.getElementById('pomodoro-pause-btn');
+    const pomodoroResetBtn = document.getElementById('pomodoro-reset-btn');
+    const pomodoroStatus = document.getElementById('pomodoro-status');
 
     let currentCalendarDate = new Date(); // Keep track of the month currently displayed in the calendar
     let is12HourFormat = timeFormatSelect.value === '12';
 
+    // --- Pomodoro Timer Variables ---
+    const WORK_TIME = 25 * 60; // 25 minutes in seconds
+    const SHORT_BREAK_TIME = 5 * 60; // 5 minutes in seconds
+    const LONG_BREAK_TIME = 15 * 60; // 15 minutes in seconds
+    let timerInterval;
+    let timeLeft = WORK_TIME;
+    let isPaused = true;
+    let pomodoroMode = 'work'; // 'work', 'short-break', 'long-break'
+    let pomodoroCount = 0; // Number of completed pomodoros
+
     // --- Sound Effects ---
     // Ensure you have a 'ding.mp3' in your static/sounds/ directory
     const completeSound = new Audio('static/sounds/ding.mp3');
+    const timerEndSound = new Audio('static/sounds/bell.mp3'); // Assuming you have a bell sound for timer end
 
     // --- Helper Functions ---
 
@@ -371,9 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarMonthName.textContent = currentCalendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
         const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
         let startDay = firstDayOfMonth.getDay();
+        // Adjust startDay for Sunday (0) to be the last day of the week in a 1-6 (Mon-Sat) system if needed,
+        // but typically getDay() returns 0 for Sunday, 1 for Monday, etc.
+        // If your calendar starts on Monday, you might need: startDay = (startDay === 0) ? 6 : startDay - 1;
 
         for (let i = 0; i < startDay; i++) {
             const emptyDay = document.createElement('div');
@@ -381,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
             calendarGrid.appendChild(emptyDay);
         }
 
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         for (let day = 1; day <= daysInMonth; day++) {
             const dayElement = document.createElement('div');
             dayElement.classList.add('calendar-day');
@@ -408,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (is12HourFormat) {
             ampm = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12;
-            hours = hours ? hours : 12;
+            hours = hours ? hours : 12; // The hour '0' should be '12' in 12-hour format
         }
 
         hours = String(hours).padStart(2, '0');
@@ -655,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- New Authentication Functions ---
+    // --- Authentication Functions ---
 
     function showAuthOverlay() {
         authOverlay.style.display = 'flex';
@@ -796,53 +809,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- New AI Brainstormer Logic ---
-    async function brainstormTasks() {
-        const mainTask = aiTaskInput.value.trim();
-        if (!mainTask) {
-            alert('Please enter a task to brainstorm!');
-            return;
-        }
+    // --- Pomodoro Timer Logic ---
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    }
 
-        aiSuggestionsOutput.innerHTML = ''; // Clear previous suggestions
-        aiLoadingIndicator.style.display = 'block'; // Show loading indicator
-        aiBrainstormButton.disabled = true; // Disable button during loading
+    function updatePomodoroDisplay() {
+        pomodoroDisplay.textContent = formatTime(timeLeft);
+    }
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/ai-brainstorm`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mainTask: mainTask }),
-                credentials: 'include'
-            });
+    function startTimer() {
+        if (!isPaused) return; // Already running
+        isPaused = false;
+        pomodoroStartBtn.disabled = true;
+        pomodoroPauseBtn.disabled = false;
+        pomodoroResetBtn.disabled = false;
 
-            if (!response.ok) {
-                if (response.status === 401) { alert('You need to be logged in to use the AI brainstormer.'); showAuthOverlay(); }
-                const errorText = await response.text();
-                console.error('Error brainstorming tasks:', errorText);
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
-            }
+        pomodoroStatus.textContent = pomodoroMode === 'work' ? 'Time to focus!' : 'Enjoy your break!';
 
-            const data = await response.json();
-            if (data && data.sub_tasks && Array.isArray(data.sub_tasks)) {
-                const ul = document.createElement('ul');
-                data.sub_tasks.forEach(task => {
-                    const li = document.createElement('li');
-                    li.textContent = task;
-                    ul.appendChild(li);
-                });
-                aiSuggestionsOutput.appendChild(ul);
+        timerInterval = setInterval(() => {
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerEndSound.play();
+                handleTimerEnd();
             } else {
-                aiSuggestionsOutput.textContent = 'No suggestions found or unexpected format.';
+                timeLeft--;
+                updatePomodoroDisplay();
             }
+        }, 1000);
+    }
 
-        } catch (error) {
-            console.error('AI Brainstorming error:', error);
-            aiSuggestionsOutput.textContent = 'Failed to generate suggestions. Please try again.';
-        } finally {
-            aiLoadingIndicator.style.display = 'none'; // Hide loading indicator
-            aiBrainstormButton.disabled = false; // Re-enable button
+    function pauseTimer() {
+        if (isPaused) return; // Already paused
+        isPaused = true;
+        clearInterval(timerInterval);
+        pomodoroStartBtn.disabled = false;
+        pomodoroPauseBtn.disabled = true;
+        pomodoroStatus.textContent = 'Paused.';
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        isPaused = true;
+        pomodoroCount = 0; // Reset pomodoro count
+        pomodoroMode = 'work';
+        timeLeft = WORK_TIME;
+        updatePomodoroDisplay();
+        pomodoroStartBtn.disabled = false;
+        pomodoroPauseBtn.disabled = true;
+        pomodoroResetBtn.disabled = true;
+        pomodoroStatus.textContent = 'Ready for work!';
+    }
+
+    function handleTimerEnd() {
+        if (pomodoroMode === 'work') {
+            pomodoroCount++;
+            if (pomodoroCount % 4 === 0) {
+                // Long break after 4 pomodoros
+                pomodoroMode = 'long-break';
+                timeLeft = LONG_BREAK_TIME;
+                pomodoroStatus.textContent = 'Long break! You earned it.';
+            } else {
+                // Short break
+                pomodoroMode = 'short-break';
+                timeLeft = SHORT_BREAK_TIME;
+                pomodoroStatus.textContent = 'Short break time!';
+            }
+        } else {
+            // Break ended, back to work
+            pomodoroMode = 'work';
+            timeLeft = WORK_TIME;
+            pomodoroStatus.textContent = 'Back to work!';
         }
+        updatePomodoroDisplay();
+        isPaused = true; // Timer stops at end, user has to click start for next session
+        pomodoroStartBtn.disabled = false;
+        pomodoroPauseBtn.disabled = true;
     }
 
 
@@ -910,14 +954,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateFactButton.addEventListener('click', generateFunFact);
 
-    // AI Brainstormer Event Listeners
-    aiBrainstormButton.addEventListener('click', brainstormTasks);
-    aiTaskInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            brainstormTasks();
-        }
-    });
+    // Pomodoro Timer Event Listeners
+    pomodoroStartBtn.addEventListener('click', startTimer);
+    pomodoroPauseBtn.addEventListener('click', pauseTimer);
+    pomodoroResetBtn.addEventListener('click', resetTimer);
+
+    // Initial setup for Pomodoro timer
+    updatePomodoroDisplay();
+    pomodoroPauseBtn.disabled = true; // Pause button disabled initially
+    pomodoroResetBtn.disabled = true; // Reset button disabled initially
+
 
     // Initial checks and setup
     checkAuthenticationStatus();

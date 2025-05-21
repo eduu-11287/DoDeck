@@ -187,7 +187,7 @@ body {
     flex-grow: 1; /* Allows it to take up available space */
     overflow-y: auto; /* Scroll if tasks overflow */
     padding-right: 10px; /* Space for scrollbar */
-    margin-bottom: 20px; /* Space before AI brainstormer */
+    margin-bottom: 20px; /* Space before Pomodoro timer */
 }
 
 .task-item {
@@ -482,7 +482,7 @@ body {
 }
 
 .logout-button:hover {
-    background-color: #00e600; /* Slightly darker green on hover */
+    background-color: #00e600;
     box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
     transform: translateY(-2px);
 }
@@ -804,693 +804,8 @@ body {
     100% { text-shadow: 0 0 15px rgba(0, 255, 0, 1); }
 }
 
-/* --- Authentication Overlay and Modal --- */
-.auth-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8); /* Dark overlay */
-    display: flex; /* Use flexbox for centering */
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Ensure it's on top of everything */
-    color: #fff; /* Inherit text color */
-}
-
-.auth-modal {
-    background-color: #1a1a1a; /* Darker panel background */
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); /* Green glow */
-    text-align: center;
-    width: 350px;
-    max-width: 90%;
-    border: 1px solid #00FF00;
-}
-
-.auth-modal h2 {
-    color: #00FF00;
-    margin-bottom: 20px;
-    font-size: 1.8em;
-}
-
-.auth-modal h3 {
-    color: #fff;
-    margin-bottom: 15px;
-    font-size: 1.5em;
-}
-
-.auth-modal p {
-    font-size: 0.9em;
-    margin-top: 15px;
-}
-
-.auth-modal input[type="text"],
-.auth-modal input[type="password"] {
-    width: calc(100% - 20px);
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid #444;
-    border-radius: 5px;
-    background-color: #333;
-    color: #fff;
-    font-size: 1em;
-}
-
-.auth-modal input[type="text"]::placeholder,
-.auth-modal input[type="password"]::placeholder {
-    color: #888;
-}
-
-
-.auth-modal button {
-    background-color: #00FF00;
-    color: #1a1a1a; /* Black text for contrast */
-    border: none;
-    padding: 12px 25px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1.1em;
-    font-weight: bold;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    width: 100%;
-    margin-top: 10px;
-}
-
-.auth-modal button:hover {
-    background-color: #00e600; /* Brighter green on hover */
-    transform: translateY(-2px);
-}
-
-.auth-toggle {
-    margin-top: 20px;
-    font-size: 0.9em;
-}
-
-.auth-toggle a {
-    color: #00FF00;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.auth-toggle a:hover {
-    text-decoration: underline;
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-    body {
-        display: block; /* Allow vertical scrolling of the entire page */
-        align-items: flex-start; /* Reset vertical alignment for stacked content */
-        padding: 0; /* Remove body padding that might cause issues */
-    }
-
-    .app-container {
-        flex-direction: column; /* Stack panels vertically on smaller screens */
-        height: auto; /* Allow height to adjust based on content */
-        min-height: 100vh; /* Ensure it still takes at least full viewport height */
-        border-radius: 0; /* No border-radius on mobile */
-        box-shadow: none; /* No shadow on mobile */
-        width: 100%; /* Take full width */
-    }
-
-    .panel {
-        width: 100%; /* Panels take full width */
-        min-height: unset; /* Reset min-height */
-        border-bottom: 1px solid rgba(0, 255, 0, 0.1); /* Separator between stacked panels */
-        padding: 20px; /* Consistent padding for all panels on mobile */
-        box-sizing: border-box; /* Ensure padding is included in width */
-    }
-
-    .left-panel {
-        flex: none;
-        height: auto; /* Allow height to adjust to content */
-        min-height: 120px; /* Minimum height for the left panel on mobile */
-        border-right: none;
-        border-bottom: 1px solid rgba(0, 255, 0, 0.1); /* Ensure separator */
-        padding-top: 20px;
-        padding-bottom: 20px;
-    }
-
-    .betterlist-logo {
-        transform: none; /* No rotation on mobile */
-        font-size: 2.5em; /* Smaller on mobile */
-        text-align: center;
-        white-space: normal;
-        margin-bottom: 15px; /* Adjust margin for mobile */
-    }
-
-    .left-panel::before,
-    .left-panel::after {
-        filter: blur(20px); /* Less blur on mobile */
-        opacity: 0.4;
-    }
-
-    .middle-panel,
-    .right-panel {
-        border-right: none; /* Remove vertical borders */
-        border-left: none;
-        padding-bottom: 30px; /* Add some padding at the bottom */
-        min-height: 40vh; /* Ensure these panels have a reasonable minimum height */
-    }
-
-    .panel-title {
-        margin-bottom: 20px;
-    }
-
-    .tasks-summary {
-        margin-bottom: 30px;
-    }
-
-    .add-task-button {
-        align-self: center; /* Center the add button on mobile */
-    }
-
-    .labels-graph {
-        margin-bottom: 15px;
-    }
-
-    .labels-time {
-        font-size: 1.8em;
-        margin-bottom: 15px;
-    }
-
-    .labels-today-summary {
-        margin-bottom: 15px;
-    }
-
-    .add-label-button {
-        margin-top: 20px;
-    }
-}
-
-/* Even smaller screens (e.g., very small phones) */
-@media (max-width: 480px) {
-    .left-panel {
-        min-height: 100px; /* Smaller min-height for very small screens */
-    }
-
-    .betterlist-logo {
-        font-size: 2em;
-    }
-
-    .panel {
-        padding: 15px; /* Reduce padding further */
-    }
-
-    .task-item {
-        padding: 12px 15px;
-        margin-bottom: 10px;
-        flex-direction: column; /* Stack info and status on very small screens */
-        align-items: flex-start;
-    }
-
-    .task-status {
-        margin-top: 10px;
-        width: 100%;
-        justify-content: flex-end; /* Push checkbox to the right */
-    }
-
-    .status-label {
-        margin-right: 5px;
-    }
-
-    .time-left {
-        margin-right: 10px;
-    }
-
-    .label-item {
-        padding: 10px 12px;
-        margin-bottom: 10px;
-    }
-}
-
-/* Custom CSS for Calendar and Clock */
-#calendar-container {
-    background-color: #2a2a2a;
-    border-radius: 15px;
-    margin-bottom: 20px;
-    padding: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-#calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    color: #fff;
-}
-
-#calendar-header button {
-    background-color: transparent;
-    border: none;
-    color: #00FF00;
-    cursor: pointer;
-    font-size: 1.2em;
-    padding: 5px;
-    transition: transform 0.2s ease;
-}
-
-#calendar-header button:hover {
-    transform: scale(1.2);
-}
-
-#calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
-    text-align: center;
-}
-
-.calendar-day {
-    background-color: #333;
-    border-radius: 8px;
-    padding: 10px;
-    color: #fff;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    font-size: 0.9em;
-}
-
-.calendar-day:hover {
-    background-color: #00FF00;
-    color: #1a1a1a;
-}
-
-.calendar-day.today {
-    background-color: #00FF00;
-    color: #1a1a1a;
-    font-weight: bold;
-}
-
-.calendar-day.inactive {
-    background-color: #2a2a2a;
-    color: #888;
-    cursor: not-allowed;
-}
-
-#digital-clock {
-    font-size: 2em;
-    font-weight: 700;
-    color: #00FF00;
-    text-align: center;
-    margin-bottom: 20px;
-    letter-spacing: 2px;
-    text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
-}
-
-.ampm {
-    font-size: 0.5em;
-    vertical-align: super;
-}
-
-#time-format-select {
-    background-color: #2a2a2a;
-    color: #fff;
-    border: 1px solid #00FF00;
-    border-radius: 8px;
-    padding: 8px 15px;
-    font-size: 0.9em;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    margin: 0 auto;
-    display: block;
-}
-
-#time-format-select:focus {
-    outline: none;
-    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
-}
-
-#time-format-select option {
-    background-color: #2a2a2a;
-    color: #fff;
-}
-
-/* Fun Fact Section */
-#fun-fact-container {
-    background-color: #2a2a2a;
-    border-radius: 15px;
-    padding: 15px;
-    margin-top: 20px; /* Space from the time format selector */
-    margin-bottom: 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    min-height: 100px; /* Ensure it has some height even if fact is short */
-    display: flex;
-    align-items: center; /* Vertically center the text */
-    justify-content: center; /* Horizontally center the text */
-    text-align: center;
-}
-
-#fun-fact-display {
-    color: #fff;
-    font-size: 1em;
-    line-height: 1.5;
-    font-weight: 500;
-}
-
-#generate-fact-button {
-    background-color: #00FF00;
-    color: #1a1a1a;
-    border: none;
-    border-radius: 10px;
-    padding: 12px 25px;
-    font-size: 1em;
-    font-weight: bold;
-    text-transform: uppercase;
-    cursor: pointer;
-    width: 100%; /* Full width */
-    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
-    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
-}
-
-#generate-fact-button:hover {
-    background-color: #00e600;
-    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
-    transform: translateY(-2px);
-}
-
-/* Styles for In-line Task Editing */
-.task-item.editing {
-    background-color: #3a3a3a; /* Slightly different background when editing */
-    box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4); /* More pronounced glow */
-    border: 1px solid #00FF00; /* Neon border to indicate active editing */
-}
-
-.task-item .edit-input {
-    background-color: #1a1a1a; /* Dark background for input */
-    border: 1px solid #00FF00; /* Neon green border */
-    color: #fff; /* White text */
-    padding: 8px 10px;
-    border-radius: 5px;
-    font-size: 1em;
-    margin-bottom: 5px; /* Space between name and category inputs */
-    width: calc(100% - 22px); /* Adjust width considering padding and border */
-    box-sizing: border-box; /* Include padding and border in element's total width and height */
-}
-
-.task-item .edit-input:focus {
-    outline: none;
-    box-shadow: 0 0 5px rgba(0, 255, 0, 0.7);
-}
-
-.task-item .edit-actions {
-    display: flex;
-    gap: 8px; /* Space between buttons */
-    margin-top: 10px; /* Space from inputs */
-}
-
-.task-item .edit-save-btn,
-.task-item .edit-cancel-btn {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9em;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-}
-
-.task-item .edit-save-btn {
-    background-color: #00FF00;
-    color: #1a1a1a;
-}
-
-.task-item .edit-save-btn:hover {
-    background-color: #00e600;
-    transform: translateY(-1px);
-}
-
-.task-item .edit-cancel-btn {
-    background-color: #444; /* Dark gray for cancel */
-    color: #fff;
-}
-
-.task-item .edit-cancel-btn:hover {
-    background-color: #555;
-    transform: translateY(-1px);
-}
-
-/* Hide original info when editing */
-.task-item.editing .task-info,
-.task-item.editing .task-status {
-    display: none;
-}
-
-/* Ensure info and status are displayed when not editing */
-.task-item:not(.editing) .task-info,
-.task-item:not(.editing) .task-status {
-    display: flex; /* Or block, as appropriate for original layout */
-    flex-direction: column; /* Revert to column for task-info */
-}
-.task-item:not(.editing) .task-status {
-    flex-direction: row; /* Revert to row for task-status */
-}
-
-/* Adjustments for edit mode layout */
-.task-item.editing {
-    flex-direction: column; /* Stack name, category, buttons vertically */
-    align-items: flex-start; /* Align contents to start */
-}
-
-/* Styles for Due Dates & Statuses */
-.task-due-date {
-    font-size: 0.85em;
-    color: #00e600; /* Default due date color (slightly darker green) */
-    margin-top: 5px; /* Space from category */
-    font-weight: 500;
-}
-
-.task-item.due-soon .task-due-date {
-    color: #FFC107; /* Orange/Yellow for tasks due soon */
-    font-weight: bold;
-}
-
-.task-item.overdue .task-due-date {
-    color: #FF0000; /* Red for overdue tasks */
-    font-weight: bold;
-    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
-}
-
-.task-item.overdue {
-    border: 1px solid rgba(255, 0, 0, 0.3); /* Subtle red border */
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2); /* Red glow */
-}
-
-
-/* Styles for Add Task Modal (new structure) */
-.add-task-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent overlay */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Ensure it's on top */
-}
-
-.add-task-modal {
-    background-color: #1a1a1a; /* Dark background */
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: 0 0 30px rgba(0, 255, 0, 0.3); /* Neon green glow */
-    width: 90%;
-    max-width: 400px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* Space between elements */
-}
-
-.add-task-modal h3 {
-    color: #00FF00;
-    font-size: 1.8em;
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-.add-task-modal input[type="text"],
-.add-task-modal input[type="date"],
-.add-task-modal input[type="time"] {
-    background-color: #2a2a2a;
-    border: 1px solid #00FF00;
-    color: #fff;
-    padding: 12px 15px;
-    border-radius: 10px;
-    font-size: 1em;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.add-task-modal input[type="text"]::placeholder,
-.add-task-modal input[type="date"]::placeholder,
-.add-task-modal input[type="time"]::placeholder {
-    color: #888;
-}
-
-.add-task-modal input[type="text"]:focus,
-.add-task-modal input[type="date"]:focus,
-.add-task-modal input[type="time"]:focus {
-    outline: none;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
-}
-
-/* Specific styling for date/time inputs for consistency */
-.add-task-modal input[type="date"],
-.add-task-modal input[type="time"] {
-    appearance: none; /* Remove default browser styling */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    cursor: pointer;
-}
-/* Style for the calendar/clock icon in date/time input */
-.add-task-modal input[type="date"]::-webkit-calendar-picker-indicator,
-.add-task-modal input[type="time"]::-webkit-calendar-picker-indicator {
-    filter: invert(1); /* Make icon visible on dark background */
-    cursor: pointer;
-}
-
-.add-task-modal-actions {
-    display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.add-task-modal-actions button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 10px;
-    font-size: 1em;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-}
-
-.add-task-modal-actions .save-btn {
-    background-color: #00FF00;
-    color: #1a1a1a;
-}
-
-.add-task-modal-actions .save-btn:hover {
-    background-color: #00e600;
-    transform: translateY(-1px);
-}
-
-.add-task-modal-actions .cancel-btn {
-    background-color: #444;
-    color: #fff;
-}
-
-.add-task-modal-actions .cancel-btn:hover {
-    background-color: #555;
-    transform: translateY(-1px);
-}
-
-/* Mobile responsiveness for modal */
-@media (max-width: 480px) {
-    .add-task-modal {
-        padding: 20px;
-        gap: 10px;
-    }
-    .add-task-modal h3 {
-        font-size: 1.5em;
-    }
-    .add-task-modal input {
-        padding: 10px;
-    }
-    .add-task-modal-actions button {
-        padding: 8px 15px;
-    }
-}
-
-/* Task Completion Animation */
-.task-item.completing {
-    animation: task-complete 0.4s ease-out forwards;
-    pointer-events: none; /* Disable clicks during animation */
-}
-
-@keyframes task-complete {
-    0% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        height: auto; /* Use auto for height transition */
-        padding-top: 15px;
-        padding-bottom: 15px;
-        margin-bottom: 10px;
-    }
-    50% {
-        opacity: 0.5;
-        transform: translateY(-10px) scale(0.95);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(-20px) scale(0.8);
-        height: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        margin-bottom: 0;
-        overflow: hidden; /* Hide overflow during collapse */
-    }
-}
-
-/* Daily Summary & Streak Styling */
-.tasks-today-summary {
-    background-color: #2a2a2a;
-    border-radius: 15px;
-    padding: 15px;
-    margin-top: 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    text-align: center;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.tasks-today-summary .summary-line {
-    font-size: 1.1em;
-    font-weight: 600;
-}
-
-.tasks-today-summary .summary-line span {
-    color: #00FF00;
-    font-weight: bold;
-    font-size: 1.2em;
-}
-
-.tasks-today-summary .streak-info {
-    font-size: 1em;
-    color: #eee;
-}
-
-.tasks-today-summary .streak-count {
-    color: #00FF00;
-    font-weight: bold;
-    font-size: 1.3em;
-}
-
-.tasks-today-summary .streak-count.broken {
-    color: #FF0000; /* Red for broken streak */
-}
-
-/* Optional: Streak celebration animation */
-.streak-celebration {
-    animation: pulse-green 1s infinite alternate;
-}
-
-@keyframes pulse-green {
-    0% { text-shadow: 0 0 5px rgba(0, 255, 0, 0.5); }
-    100% { text-shadow: 0 0 15px rgba(0, 255, 0, 1); }
-}
-
-/* --- AI Brainstormer Section Styles --- */
-.ai-brainstormer-section {
+/* --- Pomodoro Timer Section Styles --- */
+.pomodoro-timer-section {
     background-color: #2a2a2a;
     border-radius: 15px;
     padding: 20px;
@@ -1499,39 +814,34 @@ body {
     box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    align-items: center; /* Center content horizontally */
+    gap: 20px;
 }
 
-.ai-brainstormer-title {
+.pomodoro-title {
     color: #00FF00;
-    font-size: 1.4em;
+    font-size: 1.6em;
     font-weight: 700;
     text-align: center;
-    margin-bottom: 10px;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
-#ai-task-input {
-    background-color: #1a1a1a;
-    border: 1px solid #00FF00;
-    color: #fff;
-    padding: 12px 15px;
-    border-radius: 10px;
-    font-size: 1em;
-    width: 100%;
-    box-sizing: border-box;
+.timer-display {
+    font-family: 'Share Tech Mono', monospace; /* Monospace font for timer */
+    font-size: 4em; /* Large timer display */
+    font-weight: bold;
+    color: #00FF00;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+    margin-bottom: 10px;
 }
 
-#ai-task-input::placeholder {
-    color: #888;
+.timer-controls {
+    display: flex;
+    gap: 15px; /* Space between buttons */
+    margin-bottom: 15px;
 }
 
-#ai-task-input:focus {
-    outline: none;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
-}
-
-#ai-brainstorm-button {
+.pomodoro-btn {
     background-color: #00FF00;
     color: #1a1a1a;
     border: none;
@@ -1541,75 +851,48 @@ body {
     font-weight: bold;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
-    width: 100%;
     box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
 }
 
-#ai-brainstorm-button:hover {
+.pomodoro-btn:hover {
     background-color: #00e600;
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
 }
 
-.ai-suggestions-output {
-    background-color: #1a1a1a;
-    border: 1px solid rgba(0, 255, 0, 0.3);
-    border-radius: 10px;
-    padding: 15px;
-    min-height: 80px;
-    color: #fff;
-    font-size: 0.95em;
-    line-height: 1.6;
-    overflow-y: auto;
-    max-height: 200px; /* Limit height for scrollable area */
+.pomodoro-btn:disabled {
+    background-color: #444;
+    color: #888;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
 }
 
-.ai-suggestions-output ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.ai-suggestions-output li {
-    margin-bottom: 8px;
-    padding-left: 20px;
-    position: relative;
-}
-
-.ai-suggestions-output li::before {
-    content: '•'; /* Bullet point */
-    color: #00FF00;
-    font-size: 1.2em;
-    position: absolute;
-    left: 0;
-    top: 0;
-}
-
-.ai-loading-indicator {
-    text-align: center;
-    color: #00FF00;
+.pomodoro-status {
+    color: #aaa;
+    font-size: 1em;
     font-style: italic;
-    margin-top: 10px;
-    animation: pulse 1.5s infinite;
+    text-align: center;
 }
 
-@keyframes pulse {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; }
-    100% { opacity: 0.5; }
-}
-
-/* Mobile Responsiveness for AI Brainstormer */
+/* Mobile Responsiveness for Pomodoro Timer */
 @media (max-width: 768px) {
-    .ai-brainstormer-section {
+    .pomodoro-timer-section {
         margin-top: 20px;
         padding: 15px;
     }
-    .ai-brainstormer-title {
-        font-size: 1.2em;
+    .pomodoro-title {
+        font-size: 1.4em;
     }
-    #ai-task-input, #ai-brainstorm-button {
-        padding: 10px;
+    .timer-display {
+        font-size: 3em;
+    }
+    .timer-controls {
+        flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+        justify-content: center;
+    }
+    .pomodoro-btn {
+        padding: 10px 20px;
         font-size: 1em;
     }
 }

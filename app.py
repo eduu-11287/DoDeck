@@ -282,31 +282,18 @@ def ai_brainstorm():
         }}
         """
 
-        # Prepare the payload for the Gemini API call
-        payload = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "responseSchema": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "sub_tasks": {
-                            "type": "ARRAY",
-                            "items": {"type": "STRING"}
-                        }
-                    },
-                    "required": ["sub_tasks"]
-                }
-            }
-        }
+        # IMPORTANT: Read the API key from environment variable
+        # You MUST set GOOGLE_API_KEY as an environment variable in Render.
+        api_key = os.getenv('GOOGLE_API_KEY') 
+        if not api_key:
+            app.logger.error("AI Brainstorm: GOOGLE_API_KEY environment variable is not set.")
+            return jsonify({"error": "AI service API key is not configured on the server."}), 500
 
-        # The API key is automatically provided by the Canvas environment if left empty.
-        api_key = ""
         api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
 
         app.logger.info(f"AI Brainstorm: Calling Gemini API with prompt: {main_task}")
         # Make the fetch call to the Gemini API
-        response = requests.post(api_url, json=payload, timeout=30) # Added a timeout for the request
+        response = requests.post(api_url, json={"contents": [{"role": "user", "parts": [{"text": prompt}]}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": {"type": "OBJECT", "properties": {"sub_tasks": {"type": "ARRAY", "items": {"type": "STRING"}}}, "required": ["sub_tasks"]}}}, timeout=30) # Added a timeout for the request
         response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
 
         result = response.json()

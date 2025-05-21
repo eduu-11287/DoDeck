@@ -60,14 +60,20 @@
                 </div>
 
             <div class="pomodoro-timer-section">
-                <h3 class="pomodoro-title">Pomodoro Timer</h3>
-                <div class="timer-display" id="pomodoro-display">25:00</div>
+                <h3 class="pomodoro-title">Custom Timer</h3>
+                <div class="timer-input-group">
+                    <input type="number" id="pomodoro-hours-input" min="0" max="23" value="00" class="timer-input" placeholder="HH">
+                    <span>:</span>
+                    <input type="number" id="pomodoro-minutes-input" min="0" max="59" value="25" class="timer-input" placeholder="MM">
+                </div>
+                <div class="timer-display" id="pomodoro-display">00:25:00</div>
                 <div class="timer-controls">
+                    <button id="pomodoro-set-btn" class="pomodoro-btn">Set Timer</button>
                     <button id="pomodoro-start-btn" class="pomodoro-btn">Start</button>
                     <button id="pomodoro-pause-btn" class="pomodoro-btn">Pause</button>
-                    <button id="pomodoro-reset-btn" class="pomodoro-btn">Reset</button>
+                    <button id="pomodoro-stop-btn" class="pomodoro-btn">Stop</button>
                 </div>
-                <div class="pomodoro-status" id="pomodoro-status">Ready for work!</div>
+                <div class="pomodoro-status" id="pomodoro-status">Set your timer and start focusing!</div>
             </div>
 
             <div class="task-actions-bottom">
@@ -83,6 +89,9 @@
                     <button id="prev-month-btn">&#8249;</button>
                     <h2 id="month-name">Month</h2>
                     <button id="next-month-btn">&#8250;</button>
+                </div>
+                <div id="calendar-weekdays">
+                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
                 </div>
                 <div id="calendar-grid"></div>
             </div>

@@ -826,6 +826,42 @@ body {
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
+.timer-input-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.timer-input {
+    background-color: #1a1a1a;
+    border: 1px solid #00FF00;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    width: 60px; /* Fixed width for inputs */
+    text-align: center;
+    -moz-appearance: textfield; /* Hide arrows for Firefox */
+}
+
+/* Hide arrows for Chrome, Safari, Edge */
+.timer-input::-webkit-outer-spin-button,
+.timer-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.timer-input:focus {
+    outline: none;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+}
+
+.timer-input-group span {
+    font-size: 1.5em;
+    color: #00FF00;
+}
+
 .timer-display {
     font-family: 'Share Tech Mono', monospace; /* Monospace font for timer */
     font-size: 4em; /* Large timer display */
@@ -839,6 +875,8 @@ body {
     display: flex;
     gap: 15px; /* Space between buttons */
     margin-bottom: 15px;
+    flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+    justify-content: center;
 }
 
 .pomodoro-btn {
@@ -875,8 +913,254 @@ body {
     text-align: center;
 }
 
-/* Mobile Responsiveness for Pomodoro Timer */
+/* Calendar Specific Styles */
+#calendar-container {
+    background-color: #2a2a2a;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+#calendar-header button {
+    background-color: transparent;
+    border: none;
+    color: #00FF00;
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 5px;
+    transition: transform 0.2s ease;
+}
+
+#calendar-header button:hover {
+    transform: scale(1.2);
+}
+
+#calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    text-align: center;
+    font-size: 0.8em;
+    color: #00FF00; /* Neon green for weekdays */
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    text-align: center;
+}
+
+.calendar-day {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 0.9em;
+}
+
+.calendar-day:hover {
+    background-color: #00FF00;
+    color: #1a1a1a;
+}
+
+.calendar-day.today {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    font-weight: bold;
+}
+
+.calendar-day.inactive {
+    background-color: #2a2a2a;
+    color: #888;
+    cursor: not-allowed;
+}
+
+#digital-clock {
+    font-size: 2em;
+    font-weight: 700;
+    color: #00FF00;
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+}
+
+.ampm {
+    font-size: 0.5em;
+    vertical-align: super;
+}
+
+#time-format-select {
+    background-color: #2a2a2a;
+    color: #fff;
+    border: 1px solid #00FF00;
+    border-radius: 8px;
+    padding: 8px 15px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    margin: 0 auto;
+    display: block;
+}
+
+#time-format-select:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+#time-format-select option {
+    background-color: #2a2a2a;
+    color: #fff;
+}
+
+/* Fun Fact Section */
+#fun-fact-container {
+    background-color: #2a2a2a;
+    border-radius: 15px;
+    padding: 15px;
+    margin-top: 20px; /* Space from the time format selector */
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    min-height: 100px; /* Ensure it has some height even if fact is short */
+    display: flex;
+    align-items: center; /* Vertically center the text */
+    justify-content: center; /* Horizontally center the text */
+    text-align: center;
+}
+
+#fun-fact-display {
+    color: #fff;
+    font-size: 1em;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+#generate-fact-button {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%; /* Full width */
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+#generate-fact-button:hover {
+    background-color: #00e600;
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
+    body {
+        display: block; /* Allow vertical scrolling of the entire page */
+        align-items: flex-start; /* Reset vertical alignment for stacked content */
+        padding: 0; /* Remove body padding that might cause issues */
+    }
+
+    .app-container {
+        flex-direction: column; /* Stack panels vertically on smaller screens */
+        height: auto; /* Allow height to adjust based on content */
+        min-height: 100vh; /* Ensure it still takes at least full viewport height */
+        border-radius: 0; /* No border-radius on mobile */
+        box-shadow: none; /* No shadow on mobile */
+        width: 100%; /* Take full width */
+    }
+
+    .panel {
+        width: 100%; /* Panels take full width */
+        min-height: unset; /* Reset min-height */
+        border-bottom: 1px solid rgba(0, 255, 0, 0.1); /* Separator between stacked panels */
+        padding: 20px; /* Consistent padding for all panels on mobile */
+        box-sizing: border-box; /* Ensure padding is included in width */
+    }
+
+    .left-panel {
+        flex: none;
+        height: auto; /* Allow height to adjust to content */
+        min-height: 120px; /* Minimum height for the left panel on mobile */
+        border-right: none;
+        border-bottom: 1px solid rgba(0, 255, 0, 0.1); /* Ensure separator */
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .betterlist-logo {
+        transform: none; /* No rotation on mobile */
+        font-size: 2.5em; /* Smaller on mobile */
+        text-align: center;
+        white-space: normal;
+        margin-bottom: 15px; /* Adjust margin for mobile */
+    }
+
+    .left-panel::before,
+    .left-panel::after {
+        filter: blur(20px); /* Less blur on mobile */
+        opacity: 0.4;
+    }
+
+    .middle-panel,
+    .right-panel {
+        border-right: none; /* Remove vertical borders */
+        border-left: none;
+        padding-bottom: 30px; /* Add some padding at the bottom */
+        min-height: 40vh; /* Ensure these panels have a reasonable minimum height */
+    }
+
+    .panel-title {
+        margin-bottom: 20px;
+    }
+
+    .tasks-summary {
+        margin-bottom: 30px;
+    }
+
+    .add-task-button {
+        align-self: center; /* Center the add button on mobile */
+    }
+
+    #calendar-container {
+        margin-bottom: 15px;
+    }
+
+    #digital-clock {
+        font-size: 1.8em;
+        margin-bottom: 15px;
+    }
+
+    #time-format-select {
+        margin-bottom: 15px;
+    }
+
+    #fun-fact-container {
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+
+    #generate-fact-button {
+        margin-top: 15px;
+    }
+
     .pomodoro-timer-section {
         margin-top: 20px;
         padding: 15px;
@@ -894,5 +1178,54 @@ body {
     .pomodoro-btn {
         padding: 10px 20px;
         font-size: 1em;
+    }
+}
+
+/* Even smaller screens (e.g., very small phones) */
+@media (max-width: 480px) {
+    .left-panel {
+        min-height: 100px; /* Smaller min-height for very small screens */
+    }
+
+    .betterlist-logo {
+        font-size: 2em;
+    }
+
+    .panel {
+        padding: 15px; /* Reduce padding further */
+    }
+
+    .task-item {
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        flex-direction: column; /* Stack info and status on very small screens */
+        align-items: flex-start;
+    }
+
+    .task-status {
+        margin-top: 10px;
+        width: 100%;
+        justify-content: flex-end; /* Push checkbox to the right */
+    }
+
+    .status-label {
+        margin-right: 5px;
+    }
+
+    .time-left {
+        margin-right: 10px;
+    }
+
+    .label-item {
+        padding: 10px 12px;
+        margin-bottom: 10px;
+    }
+
+    .timer-input {
+        width: 50px; /* Smaller inputs on very small screens */
+        font-size: 1em;
+    }
+    .timer-display {
+        font-size: 2.5em;
     }
 }

@@ -47,7 +47,7 @@ def index():
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(533), nullable=False)
+    password_hash = db.Column(db.String(533), nullable=False) # Increased length for stronger hashes
     # Relationship to tasks: A user can have many tasks.
     # 'cascade="all, delete-orphan"' means if a user is deleted, their tasks are also deleted.
     tasks = db.relationship('Task', backref='user', lazy=True, cascade="all, delete-orphan")
@@ -131,7 +131,8 @@ def register():
     db.session.commit()
 
     session['user_id'] = new_user.id # Log in the user automatically after registration
-    return jsonify({"message": "Registration successful", "userId": new_user.id}), 201
+    # Include username in the response for immediate frontend update
+    return jsonify({"message": "Registration successful", "userId": new_user.id, "username": new_user.username}), 201
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -144,7 +145,8 @@ def login():
     # Check if user exists and password is correct
     if user and user.check_password(password):
         session['user_id'] = user.id # Store user ID in session
-        return jsonify({"message": "Login successful", "userId": user.id}), 200
+        # Include username in the response for immediate frontend update
+        return jsonify({"message": "Login successful", "userId": user.id, "username": user.username}), 200
     else:
         return jsonify({"error": "Invalid username or password"}), 401 # Unauthorized
 

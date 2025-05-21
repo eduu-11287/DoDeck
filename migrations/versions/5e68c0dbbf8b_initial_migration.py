@@ -1,8 +1,8 @@
-"""Add user_id to Task model (re-attempt)
+"""Initial migration
 
-Revision ID: 36656923698d
-Revises: bd76d8599515
-Create Date: 2025-05-21 18:06:01.945795
+Revision ID: 5e68c0dbbf8b
+Revises: 
+Create Date: 2025-05-21 18:14:31.957374
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '36656923698d'
-down_revision = 'bd76d8599515'
+revision = '5e68c0dbbf8b'
+down_revision = None
 branch_labels = None
 depends_on = None
 

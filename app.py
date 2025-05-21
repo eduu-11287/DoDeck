@@ -1,4 +1,5 @@
 import os
+from flask_migrate import Migrate
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -11,12 +12,22 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 
+# Use environment variable for database URL, default to SQLite for local development
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'tasks.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'a_very_secret_key_that_should_be_in_env_in_production') # Use a strong key in production!
+# IMPORTANT: This secret key MUST be set as an environment variable in production (Render)
+# In development, you can use a default, but change it for production.
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'a_very_secure_and_random_secret_key_for_flask_sessions_change_this_for_prod!')
 
 db = SQLAlchemy(app)
-CORS(app, supports_credentials=True) # Enable CORS with credentials for session cookies
+migrate = Migrate(app, db)
+
+# Configure CORS to allow credentials (cookies for sessions)
+# Explicitly allow your Render frontend URL for production.
+# For local development, 'http://127.0.0.1:5000' or '*' might be used.
+# Make sure this matches your actual deployed frontend URL.
+CORS(app, supports_credentials=True, origins=["https://betterlist-7xgp.onrender.com"])
+
 
 # For SQLAlchemy to work with PostgreSQL on Render,
 # it often needs to know about SSL options.
@@ -36,8 +47,9 @@ def index():
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    # Relationship to tasks: A user can have many tasks
+    password_hash = db.Column(db.String(533), nullable=False)
+    # Relationship to tasks: A user can have many tasks.
+    # 'cascade="all, delete-orphan"' means if a user is deleted, their tasks are also deleted.
     tasks = db.relationship('Task', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
@@ -54,9 +66,10 @@ class Task(db.Model):
     name = db.Column(db.String(120), nullable=False)
     category = db.Column(db.String(80), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-    time_left = db.Column(db.String(20), nullable=True) # This field isn't actively used in frontend logic but is kept
+    time_left = db.Column(db.String(20), nullable=True)
     due_date = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
+    # user_id is a foreign key linking tasks to users
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     def __repr__(self):
@@ -75,6 +88,7 @@ class Task(db.Model):
         }
 
 # --- Authentication Decorator ---
+# This decorator ensures a user is logged in before accessing certain routes.
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -90,9 +104,10 @@ def login_required(f):
 def init_db():
     with app.app_context():
         # IMPORTANT: Uncomment db.drop_all() ONLY if you want to completely reset your database
-        # This will DELETE ALL DATA!
+        # This will DELETE ALL DATA for all tables (User, Task)! Use with extreme caution.
         # db.drop_all()
-        db.create_all()
+        db.create_all() # This will create tables if they don't exist, and add new columns to existing tables
+                        # if they are defined in your models and don't conflict.
     return jsonify({"message": "Database tables created (if they didn't exist)!"}), 200
 
 # --- Authentication Routes ---
@@ -105,11 +120,12 @@ def register():
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
 
+    # Check if username already exists
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 409 # Conflict
 
     new_user = User(username=username)
-    new_user.set_password(password)
+    new_user.set_password(password) # Hash the password
     db.session.add(new_user)
     db.session.commit()
 
@@ -124,6 +140,7 @@ def login():
 
     user = User.query.filter_by(username=username).first()
 
+    # Check if user exists and password is correct
     if user and user.check_password(password):
         session['user_id'] = user.id # Store user ID in session
         return jsonify({"message": "Login successful", "userId": user.id}), 200
@@ -147,14 +164,14 @@ def check_auth():
 # --- Task API Routes (Protected by login_required) ---
 
 @app.route('/tasks', methods=['GET'])
-@login_required
+@login_required # Ensure user is logged in
 def get_tasks():
     user_id = session['user_id']
-    tasks = Task.query.filter_by(user_id=user_id).all() # Filter by user ID
+    tasks = Task.query.filter_by(user_id=user_id).all() # Only fetch tasks for the logged-in user
     return jsonify([task.to_dict() for task in tasks])
 
 @app.route('/tasks', methods=['POST'])
-@login_required
+@login_required # Ensure user is logged in
 def add_task():
     user_id = session['user_id'] # Get user ID from session
     data = request.get_json()
@@ -162,12 +179,13 @@ def add_task():
         name=data['name'],
         category=data.get('category', 'Uncategorized'),
         is_active=True,
-        time_left=data.get('timeLeft'),
+        time_left=data.get('timeLeft'), # This field is in model but not heavily used in frontend logic
         user_id=user_id # Assign task to logged-in user
     )
     if 'dueDate' in data and data['dueDate']:
         try:
-            if len(data['dueDate']) == 16: # YYYY-MM-DDTHH:MM format
+            # Handle both 'YYYY-MM-DDTHH:MM' and 'YYYY-MM-DDTHH:MM:SS'
+            if len(data['dueDate']) == 16:
                 new_task.due_date = datetime.datetime.fromisoformat(data['dueDate'] + ":00") # Add seconds
             else:
                 new_task.due_date = datetime.datetime.fromisoformat(data['dueDate'])
@@ -179,7 +197,7 @@ def add_task():
     return jsonify(new_task.to_dict()), 201
 
 @app.route('/tasks/<int:task_id>', methods=['PUT'])
-@login_required
+@login_required # Ensure user is logged in
 def update_task(task_id):
     user_id = session['user_id']
     task = db.session.get(Task, task_id)
@@ -187,15 +205,19 @@ def update_task(task_id):
     # Check if task exists AND belongs to the logged-in user
     if task is None or task.user_id != user_id:
         return jsonify({"error": "Task not found or not authorized"}), 404
+    
     data = request.get_json()
 
+    # Update task fields if present in the request data
     if 'name' in data:
         task.name = data['name']
     if 'category' in data:
         task.category = data['category']
     if 'isActive' in data:
+        # If task is being marked inactive (completed), set completed_at timestamp
         if data['isActive'] == False and task.is_active == True:
             task.completed_at = datetime.datetime.now()
+        # If task is being marked active (uncompleted), clear completed_at timestamp
         elif data['isActive'] == True and task.is_active == False:
             task.completed_at = None
         task.is_active = data['isActive']
@@ -204,20 +226,20 @@ def update_task(task_id):
     if 'dueDate' in data:
         if data['dueDate']:
             try:
-                if len(data['dueDate']) == 16: # YYYY-MM-DDTHH:MM format
-                    task.due_date = datetime.datetime.fromisoformat(data['dueDate'] + ":00") # Add seconds
+                if len(data['dueDate']) == 16:
+                    task.due_date = datetime.datetime.fromisoformat(data['dueDate'] + ":00")
                 else:
                     task.due_date = datetime.datetime.fromisoformat(data['dueDate'])
             except ValueError as e:
                 return jsonify({"error": f"Invalid due date format: {e}"}), 400
-        else:
+        else: # Allow clearing the due date
             task.due_date = None
 
     db.session.commit()
     return jsonify(task.to_dict())
 
 @app.route('/tasks/<int:task_id>', methods=['DELETE'])
-@login_required
+@login_required # Ensure user is logged in
 def delete_task(task_id):
     user_id = session['user_id']
     task = db.session.get(Task, task_id)
@@ -225,6 +247,7 @@ def delete_task(task_id):
     # Check if task exists AND belongs to the logged-in user
     if task is None or task.user_id != user_id:
         return jsonify({"message": "Task not found or not authorized"}), 404
+    
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"}), 200
@@ -232,6 +255,8 @@ def delete_task(task_id):
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all() # This will create tables if they don't exist
+        # This will create tables if they don't exist when running locally.
+        # For Render, you typically hit /init-db once after deployment.
+        db.create_all()
 
-    app.run(debug=True) # Set debug=False for production
+    app.run(debug=True) # Set debug=False for production for security

@@ -17,10 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const showRegisterLink = document.getElementById('show-register');
     const showLoginLink = document.getElementById('show-login');
     const mainAppContent = document.getElementById('main-app-content');
-    const logoutButton = document.getElementById('logout-button');
+    const logoutButton = document.getElementById('logout-button'); // Now in middle-panel
 
     // --- Existing Element References ---
     const tasksLeftCountSpan = document.querySelector('.tasks-left-count');
+    // Progress circle elements are SVG, not canvas:
     const progressRingProgress = document.querySelector('.progress-ring-progress');
     const taskListDiv = document.querySelector('.task-list');
     const addtaskButton = document.querySelector('.add-task-button');
@@ -44,6 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const tasksTotalTodaySpan = document.getElementById('tasks-total-today');
     const currentStreakSpan = document.getElementById('current-streak');
 
+    // New Welcome Message Element
+    const welcomeMessageDiv = document.getElementById('welcome-message');
+
     let currentCalendarDate = new Date(); // Keep track of the month currently displayed in the calendar
     let is12HourFormat = timeFormatSelect.value === '12';
 
@@ -51,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ensure you have a 'ding.mp3' in your static/sounds/ directory
     const completeSound = new Audio('static/sounds/ding.mp3');
 
-    // --- Helper Functions (No changes needed unless specified) ---
+    // --- Helper Functions ---
 
     function updateProgress(tasks) {
         const totalTasks = tasks.length;
@@ -60,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tasksLeftCountSpan.textContent = activeTasks;
 
+        // Using SVG properties for the progress circle - NO CANVAS
         const circumference = progressRingProgress.r.baseVal.value * 2 * Math.PI;
         progressRingProgress.style.strokeDasharray = `${circumference} ${circumference}`;
 
@@ -651,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginForm.style.display = 'block';
         registerForm.style.display = 'none';
         loginUsernameInput.focus();
+        welcomeMessageDiv.textContent = ''; // Clear welcome message on logout/show auth
     }
 
     function hideAuthOverlay() {
@@ -679,19 +685,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 let errorMessage = 'Login failed';
                 const responseText = await response.text(); // Read the body ONCE as text
 
-                // Now, try to parse the text as JSON if it looks like JSON
                 try {
                     const errorData = JSON.parse(responseText);
                     errorMessage = errorData.error || errorMessage;
                 } catch (jsonParseError) {
-                    // If JSON parsing fails, it's likely HTML or plain text
                     console.error("Server responded with non-JSON for login error:", responseText);
                     errorMessage = `Login failed: Unexpected server response (status: ${response.status}). Check console for details.`;
                 }
                 throw new Error(errorMessage);
             }
 
+            const data = await response.json(); // Parse successful login response
             alert('Login successful!');
+            welcomeMessageDiv.textContent = `Welcome, ${data.username}!`; // Display welcome message
             hideAuthOverlay();
             await fetchAndRenderTasks();
             renderCalendar();
@@ -727,19 +733,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 let errorMessage = 'Registration failed';
                 const responseText = await response.text(); // Read the body ONCE as text
 
-                // Now, try to parse the text as JSON if it looks like JSON
                 try {
                     const errorData = JSON.parse(responseText);
                     errorMessage = errorData.error || errorMessage;
                 } catch (jsonParseError) {
-                    // If JSON parsing fails, it's likely HTML or plain text
                     console.error("Server responded with non-JSON for registration error:", responseText);
                     errorMessage = `Registration failed: Unexpected server response (status: ${response.status}). Check console for details.`;
                 }
                 throw new Error(errorMessage);
             }
 
+            const data = await response.json(); // Parse successful registration response
             alert('Registration successful! You are now logged in.');
+            welcomeMessageDiv.textContent = `Welcome, ${data.username}!`; // Display welcome message
             hideAuthOverlay();
             await fetchAndRenderTasks();
             renderCalendar();
@@ -775,6 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tasksTotalTodaySpan.textContent = '0';
             currentStreakSpan.textContent = '0';
             currentStreakSpan.classList.add('broken');
+            welcomeMessageDiv.textContent = ''; // Clear welcome message on logout
 
         } catch (error) {
             console.error('Logout error:', error);
@@ -788,13 +795,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`${BACKEND_URL}/check_auth`, {credentials: 'include'});
             if (!response.ok) {
-                // If check_auth returns non-200, it's likely not authenticated or a server error
                 const errorText = await response.text();
                 console.error('Error checking authentication status:', errorText);
                 throw new Error(`Auth check failed: status ${response.status} - ${errorText.substring(0,100)}...`);
             }
             const data = await response.json();
             if (data.authenticated) {
+                welcomeMessageDiv.textContent = `Welcome, ${data.username}!`; // Display welcome message
                 hideAuthOverlay();
                 await fetchAndRenderTasks();
                 renderCalendar();
@@ -812,7 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loginButton.addEventListener('click', handleLogin);
     registerButton.addEventListener('click', handleRegister);
-    logoutButton.addEventListener('click', handleLogout);
+    logoutButton.addEventListener('click', handleLogout); // Event listener for the new logout button position
 
     showRegisterLink.addEventListener('click', (e) => {
         e.preventDefault();
@@ -846,13 +853,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateFactButton.addEventListener('click', generateFunFact);
 
+    // Initial checks and setup
     checkAuthenticationStatus();
-
     setInterval(updateClock, 1000);
-
-    // Refresh tasks every minute to reflect changes
-    setInterval(fetchAndRenderTasks, 60 * 1000);
-
-    // Initialize streak display on load
+    setInterval(fetchAndRenderTasks, 60 * 1000); // Refresh tasks every minute
     currentStreakSpan.textContent = parseInt(localStorage.getItem('currentStreak')) || 0;
 });

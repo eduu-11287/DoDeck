@@ -34,7 +34,7 @@
     <div class="app-container" id="main-app-content" style="display: none;">
         <div class="panel left-panel">
             <h1 class="betterlist-logo">BETTERLIST</h1>
-            <button id="logout-button" class="logout-button">Logout</button>
+            <div id="welcome-message" class="welcome-message"></div>
         </div>
 
         <div class="panel middle-panel">
@@ -57,7 +57,11 @@
 
             <div class="task-list">
                 </div>
-            <button class="add-task-button">+</button>
+
+            <div class="task-actions-bottom">
+                <button id="logout-button" class="action-button logout-button">Logout</button>
+                <button class="add-task-button action-button">+</button>
+            </div>
         </div>
 
         <div class="panel right-panel">

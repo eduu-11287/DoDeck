@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             authOverlay.style.display = 'none';
             mainAppContent.style.display = 'flex';
             // Fix: Ensure welcome message is correctly formatted
-            welcomeMessage.textContent = `Welcome, @${username}!`; 
+            welcomeMessage.textContent = `Welcome, ${username}!`; 
             fetchTasks(); // Fetch tasks when logged in
             fetchNotes(); // Fetch notes when logged in
             renderCalendar(currentMonth, currentYear); // Render calendar on login

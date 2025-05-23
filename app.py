@@ -5,8 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps # Import wraps for the decorator
-# Removed json and requests imports as AI brainstormer is removed
+from functools import wraps
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -52,6 +51,8 @@ class User(db.Model):
     # Relationship to tasks: A user can have many tasks.
     # 'cascade="all, delete-orphan"' means if a user is deleted, their tasks are also deleted.
     tasks = db.relationship('Task', backref='user', lazy=True, cascade="all, delete-orphan")
+    # New: Relationship to notes
+    notes = db.relationship('Note', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -89,6 +90,35 @@ class Task(db.Model):
             'userId': self.user_id
         }
 
+# New: Note Model
+class Note(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    topic = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=True) # Use Text for potentially long notes
+    category = db.Column(db.String(80), nullable=True)
+    note_date = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now) # Date for the note entry
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+
+    # user_id is a foreign key linking notes to users
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<Note {self.id}: {self.topic} (User: {self.user_id}) - Category: {self.category} - Date: {self.note_date}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'topic': self.topic,
+            'content': self.content,
+            'category': self.category,
+            'noteDate': self.note_date.isoformat() if self.note_date else None,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
+            'userId': self.user_id
+        }
+
+
 # --- Authentication Decorator ---
 # This decorator ensures a user is logged in before accessing certain routes.
 def login_required(f):
@@ -106,7 +136,7 @@ def login_required(f):
 def init_db():
     with app.app_context():
         # IMPORTANT: Uncomment db.drop_all() ONLY if you want to completely reset your database
-        # This will DELETE ALL DATA for all tables (User, Task)! Use with extreme caution.
+        # This will DELETE ALL DATA for all tables (User, Task, Note)! Use with extreme caution.
         # db.drop_all()
         db.create_all() # This will create tables if they don't exist, and add new columns to existing tables
                         # if they are defined in your models and don't conflict.
@@ -256,7 +286,101 @@ def delete_task(task_id):
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"}), 200
 
-# Removed the /ai-brainstorm endpoint entirely as it's being replaced.
+
+# New: Note API Routes (Protected by login_required)
+@app.route('/notes', methods=['GET'])
+@login_required
+def get_notes():
+    user_id = session['user_id']
+    # Order notes by category and then by note_date (descending for newest first within category)
+    notes = Note.query.filter_by(user_id=user_id).order_by(Note.category, Note.note_date.desc()).all()
+    return jsonify([note.to_dict() for note in notes])
+
+@app.route('/notes', methods=['POST'])
+@login_required
+def add_note():
+    user_id = session['user_id']
+    data = request.get_json()
+    
+    topic = data.get('topic')
+    content = data.get('content')
+    category = data.get('category', 'Uncategorized')
+    note_date_str = data.get('noteDate')
+
+    if not topic:
+        return jsonify({"error": "Note topic is required"}), 400
+
+    note_date = None
+    if note_date_str:
+        try:
+            # Attempt to parse as full datetime, then just date
+            note_date = datetime.datetime.fromisoformat(note_date_str)
+        except ValueError:
+            try:
+                note_date = datetime.datetime.strptime(note_date_str, '%Y-%m-%d')
+            except ValueError as e:
+                return jsonify({"error": f"Invalid note date format: {e}"}), 400
+    else:
+        note_date = datetime.datetime.now() # Default to current date if not provided
+
+    new_note = Note(
+        topic=topic,
+        content=content,
+        category=category,
+        note_date=note_date,
+        user_id=user_id
+    )
+    db.session.add(new_note)
+    db.session.commit()
+    return jsonify(new_note.to_dict()), 201
+
+@app.route('/notes/<int:note_id>', methods=['PUT'])
+@login_required
+def update_note(note_id):
+    user_id = session['user_id']
+    note = db.session.get(Note, note_id)
+
+    if note is None or note.user_id != user_id:
+        return jsonify({"error": "Note not found or not authorized"}), 404
+    
+    data = request.get_json()
+
+    if 'topic' in data:
+        note.topic = data['topic']
+    if 'content' in data:
+        note.content = data['content']
+    if 'category' in data:
+        note.category = data['category']
+    if 'noteDate' in data:
+        if data['noteDate']:
+            try:
+                note.note_date = datetime.datetime.fromisoformat(data['noteDate'])
+            except ValueError:
+                try:
+                    note.note_date = datetime.datetime.strptime(data['noteDate'], '%Y-%m-%d')
+                except ValueError as e:
+                    return jsonify({"error": f"Invalid note date format: {e}"}), 400
+        else:
+            note.note_date = datetime.datetime.now() # Default to current date if cleared
+    
+    note.updated_at = datetime.datetime.now() # Update timestamp
+
+    db.session.commit()
+    return jsonify(note.to_dict())
+
+@app.route('/notes/<int:note_id>', methods=['DELETE'])
+@login_required
+def delete_note(note_id):
+    user_id = session['user_id']
+    note = db.session.get(Note, note_id)
+
+    if note is None or note.user_id != user_id:
+        return jsonify({"message": "Note not found or not authorized"}), 404
+    
+    db.session.delete(note)
+    db.session.commit()
+    return jsonify({"message": "Note deleted successfully"}), 200
+
 
 if __name__ == '__main__':
     with app.app_context():

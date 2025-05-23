@@ -313,7 +313,7 @@ body {
     transform: translateY(-2px);
 }
 
-/* New: Task Actions Bottom Container (for Logout and Add Task buttons) */
+/* New: Task Actions Bottom Container (for Logout, Notes and Add Task buttons) */
 .task-actions-bottom {
     display: flex;
     justify-content: flex-end; /* Pushes buttons to the right */
@@ -482,6 +482,26 @@ body {
 }
 
 .logout-button:hover {
+    background-color: #00e600;
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+/* New: Notes Button Styling */
+.notes-button {
+    background-color: #00FF00; /* Neon green */
+    color: #1a1a1a;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.notes-button:hover {
     background-color: #00e600;
     box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
     transform: translateY(-2px);
@@ -1069,6 +1089,271 @@ body {
     text-decoration: underline;
 }
 
+/* New: Notes View and Modal Styles */
+.notes-view {
+    /* Initially hidden, will be shown by JS */
+    /* Inherits middle-panel styles */
+    flex: 2; /* Takes more space */
+    background-color: #242424; /* Slightly lighter dark background */
+    border-right: 1px solid rgba(0, 255, 0, 0.1); /* Subtle divider */
+    border-left: 1px solid rgba(0, 255, 0, 0.1);
+    overflow-y: auto; /* Allow scrolling for notes within this panel */
+    display: flex;
+    flex-direction: column; /* Ensure content stacks vertically */
+}
+
+.notes-display-area {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-bottom: 20px;
+}
+
+.note-category-heading {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #00FF00; /* Neon green for category headings */
+    text-align: left;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    padding-left: 10px;
+    border-bottom: 2px solid rgba(0, 255, 0, 0.3); /* Underline effect */
+    padding-bottom: 5px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5); /* Subtle glow */
+}
+
+.note-item {
+    background-color: #333333; /* Darker background for note cards */
+    border-radius: 10px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column; /* Stack topic, date, content vertically */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer; /* Indicates clickable for editing */
+    position: relative; /* For delete button positioning */
+}
+
+.note-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 255, 0, 0.1);
+}
+
+.note-topic {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.note-date-display {
+    font-size: 0.85em;
+    color: #aaa;
+    margin-bottom: 10px;
+}
+
+.note-content-preview {
+    font-size: 0.9em;
+    color: #ccc;
+    line-height: 1.4;
+    max-height: 60px; /* Limit preview height */
+    overflow: hidden; /* Hide overflowing text */
+    text-overflow: ellipsis; /* Add ellipsis for overflow */
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Limit to 3 lines */
+    -webkit-box-orient: vertical;
+    margin-bottom: 10px;
+}
+
+.note-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.note-edit-btn, .note-delete-btn {
+    background-color: transparent;
+    border: 1px solid rgba(0, 255, 0, 0.5);
+    color: #00FF00;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.note-delete-btn {
+    border-color: rgba(255, 0, 0, 0.5);
+    color: rgba(255, 0, 0, 0.8);
+}
+
+.note-edit-btn:hover {
+    background-color: rgba(0, 255, 0, 0.2);
+    color: #00e600;
+    border-color: #00e600;
+}
+
+.note-delete-btn:hover {
+    background-color: rgba(255, 0, 0, 0.2);
+    color: #FF0000;
+    border-color: #FF0000;
+}
+
+.note-actions-bottom {
+    display: flex;
+    justify-content: space-between; /* Space out buttons */
+    align-items: center;
+    gap: 15px;
+    padding-top: 20px;
+    margin-top: auto;
+}
+
+.add-note-button {
+    background-color: #00FF00;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 50%; /* Circle shape */
+    width: 60px;
+    height: 60px;
+    font-size: 2.5em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.add-note-button:hover {
+    background-color: #00e600;
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.back-button {
+    background-color: #444; /* Dark gray for back button */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.back-button:hover {
+    background-color: #555;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Add/Edit Note Modal Styles (similar to add-task-modal) */
+.add-note-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.add-note-modal {
+    background-color: #1a1a1a;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+    width: 90%;
+    max-width: 500px; /* Slightly wider for notes content */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.add-note-modal h3 {
+    color: #00FF00;
+    font-size: 1.8em;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.add-note-modal input[type="text"],
+.add-note-modal input[type="date"],
+.add-note-modal select,
+.add-note-modal textarea {
+    background-color: #2a2a2a;
+    border: 1px solid #00FF00;
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-size: 1em;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-note-modal input[type="text"]::placeholder,
+.add-note-modal textarea::placeholder {
+    color: #888;
+}
+
+.add-note-modal input[type="text"]:focus,
+.add-note-modal input[type="date"]:focus,
+.add-note-modal select:focus,
+.add-note-modal textarea:focus {
+    outline: none;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+}
+
+.add-note-modal textarea {
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 100px;
+}
+
+.add-note-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.add-note-modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.add-note-modal-actions .save-btn {
+    background-color: #00FF00;
+    color: #1a1a1a;
+}
+
+.add-note-modal-actions .save-btn:hover {
+    background-color: #00e600;
+    transform: translateY(-1px);
+}
+
+.add-note-modal-actions .cancel-btn {
+    background-color: #444;
+    color: #fff;
+}
+
+.add-note-modal-actions .cancel-btn:hover {
+    background-color: #555;
+    transform: translateY(-1px);
+}
+
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
@@ -1135,7 +1420,15 @@ body {
         margin-bottom: 30px;
     }
 
-    .add-task-button {
+    /* Task and Note action buttons bottom alignment */
+    .task-actions-bottom,
+    .note-actions-bottom {
+        justify-content: center; /* Center buttons on mobile */
+        flex-wrap: wrap; /* Allow buttons to wrap */
+    }
+
+    .add-task-button,
+    .add-note-button {
         align-self: center; /* Center the add button on mobile */
     }
 
@@ -1182,6 +1475,17 @@ body {
     .auth-form button {
         padding: 12px 25px;
         font-size: 1.1em;
+    }
+
+    /* Notes specific mobile adjustments */
+    .note-item {
+        flex-direction: column; /* Stack content on small screens */
+        align-items: flex-start;
+    }
+    .note-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 10px;
     }
 }
 
@@ -1246,5 +1550,22 @@ body {
     .auth-form button {
         padding: 10px 20px;
         font-size: 1em;
+    }
+
+    /* Notes modal for very small screens */
+    .add-note-modal {
+        padding: 20px;
+        gap: 10px;
+    }
+    .add-note-modal h3 {
+        font-size: 1.5em;
+    }
+    .add-note-modal input,
+    .add-note-modal select,
+    .add-note-modal textarea {
+        padding: 10px;
+    }
+    .add-note-modal-actions button {
+        padding: 8px 15px;
     }
 }

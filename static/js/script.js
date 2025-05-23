@@ -4,860 +4,832 @@ document.addEventListener('DOMContentLoaded', () => {
     // IMPORTANT: Make sure this BACKEND_URL matches your deployed Flask backend URL on Render.
     const BACKEND_URL = 'https://betterlist-7xgp.onrender.com'; // This should be your Render app's URL
 
-    // --- New Auth Element References ---
+    // --- DOM Elements ---
     const authOverlay = document.getElementById('auth-overlay');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
+    const showRegisterLink = document.getElementById('show-register');
+    const showLoginLink = document.getElementById('show-login');
+    const loginButton = document.getElementById('login-button');
+    const registerButton = document.getElementById('register-button');
     const loginUsernameInput = document.getElementById('login-username');
     const loginPasswordInput = document.getElementById('login-password');
     const registerUsernameInput = document.getElementById('register-username');
     const registerPasswordInput = document.getElementById('register-password');
-    const loginButton = document.getElementById('login-button');
-    const registerButton = document.getElementById('register-button');
-    const showRegisterLink = document.getElementById('show-register');
-    const showLoginLink = document.getElementById('show-login');
+
     const mainAppContent = document.getElementById('main-app-content');
-    const logoutButton = document.getElementById('logout-button'); // Now in middle-panel
+    const welcomeMessage = document.getElementById('welcome-message');
+    const logoutButton = document.getElementById('logout-button');
 
-    // --- Existing Element References ---
-    const tasksLeftCountSpan = document.querySelector('.tasks-left-count');
-    // Progress circle elements are SVG, not canvas:
-    const progressRingProgress = document.querySelector('.progress-ring-progress');
-    const taskListDiv = document.querySelector('.task-list');
-    const addtaskButton = document.querySelector('.add-task-button');
+    const taskList = document.querySelector('.task-list');
+    const addTaskButton = document.querySelector('.add-task-button');
+    const addTaskModalOverlay = document.getElementById('add-task-modal-overlay');
+    const saveNewTaskBtn = document.getElementById('save-new-task-btn');
+    const cancelNewTaskBtn = document.getElementById('cancel-new-task-btn');
+    const newTaskNameInput = document.getElementById('new-task-name');
+    const newTaskCategoryInput = document.getElementById('new-task-category');
+    const newTaskDueDateInput = document.getElementById('new-task-due-date');
+    const newTaskDueTimeInput = document.getElementById('new-task-due-time');
 
-    // Calendar Elements
-    const calendarMonthName = document.getElementById('month-name');
-    const calendarGrid = document.getElementById('calendar-grid');
-    const prevMonthBtn = document.getElementById('prev-month-btn');
-    const nextMonthBtn = document.getElementById('next-month-btn');
-
-    // Clock Elements
-    const digitalClockDiv = document.getElementById('digital-clock');
-    const timeFormatSelect = document.getElementById('time-format-select');
-
-    // Fun Fact Elements
-    const funFactDisplay = document.getElementById('fun-fact-display');
-    const generateFactButton = document.getElementById('generate-fact-button');
-
-    // Daily Summary & Streak Elements
+    const tasksLeftCount = document.querySelector('.tasks-left-count');
+    const progressCircle = document.querySelector('.progress-ring-progress');
     const tasksCompletedTodaySpan = document.getElementById('tasks-completed-today');
     const tasksTotalTodaySpan = document.getElementById('tasks-total-today');
     const currentStreakSpan = document.getElementById('current-streak');
 
-    // Welcome Message Element (moved to middle panel)
-    const welcomeMessageDiv = document.getElementById('welcome-message');
+    const prevMonthBtn = document.getElementById('prev-month-btn');
+    const nextMonthBtn = document.getElementById('next-month-btn');
+    const monthNameDisplay = document.getElementById('month-name');
+    const calendarGrid = document.getElementById('calendar-grid');
 
-    let currentCalendarDate = new Date(); // Keep track of the month currently displayed in the calendar
-    let is12HourFormat = timeFormatSelect.value === '12';
+    const digitalClock = document.getElementById('digital-clock');
+    const timeFormatSelect = document.getElementById('time-format-select');
 
-    // --- Sound Effects ---
-    // Ensure you have a 'ding.mp3' in your static/sounds/ directory
-    const completeSound = new Audio('static/sounds/ding.mp3');
+    const funFactDisplay = document.getElementById('fun-fact-display');
+    const generateFactButton = document.getElementById('generate-fact-button');
 
-    // --- Helper Functions ---
+    // New Notes Feature DOM Elements
+    const showNotesButton = document.getElementById('show-notes-button');
+    const addNoteButton = document.getElementById('add-note-button');
+    const backToTasksButton = document.getElementById('back-to-tasks-button');
+    const tasksView = document.getElementById('tasks-view');
+    const notesView = document.getElementById('notes-view');
+    const notesDisplayArea = document.getElementById('notes-display-area');
+    const addNoteModalOverlay = document.getElementById('add-note-modal-overlay');
+    const noteModalTitle = document.getElementById('note-modal-title');
+    const noteIdField = document.getElementById('note-id-field');
+    const noteTopicInput = document.getElementById('note-topic');
+    const noteDateInput = document.getElementById('note-date');
+    const noteCategorySelect = document.getElementById('note-category');
+    const noteContentTextarea = document.getElementById('note-content');
+    const saveNoteBtn = document.getElementById('save-note-btn');
+    const cancelNoteBtn = document.getElementById('cancel-note-btn');
 
-    function updateProgress(tasks) {
-        const totalTasks = tasks.length;
-        const completedTasks = tasks.filter(task => !task.isActive).length;
-        const activeTasks = totalTasks - completedTasks;
+    // --- Global Variables ---
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let currentStreak = 0; // Initialize streak
+    let completionSound = new Audio('static/sounds/ding.mp3'); // Path to your sound file
 
-        tasksLeftCountSpan.textContent = activeTasks;
+    // --- Utility Functions ---
 
-        // Using SVG properties for the progress circle - NO CANVAS
-        const circumference = progressRingProgress.r.baseVal.value * 2 * Math.PI;
-        progressRingProgress.style.strokeDasharray = `${circumference} ${circumference}`;
+    /**
+     * Handles API requests.
+     * @param {string} url - The API endpoint.
+     * @param {string} method - HTTP method (GET, POST, PUT, DELETE).
+     * @param {object} [data=null] - Data to send with the request (for POST/PUT).
+     * @returns {Promise<object>} - JSON response from the API.
+     */
+    async function apiRequest(url, method, data = null) {
+        const options = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include' // Important for sending cookies (session)
+        };
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
 
-        if (totalTasks === 0) {
-            progressRingProgress.style.strokeDashoffset = circumference;
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            // Handle 204 No Content for DELETE requests
+            if (response.status === 204 || response.headers.get('Content-Length') === '0') {
+                return {}; 
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("API Request Failed:", error);
+            // Implement a more user-friendly error display here
+            alert(`Error: ${error.message}`); // Using alert for simplicity, replace with custom modal
+            throw error;
+        }
+    }
+
+    /**
+     * Formats a date string to YYYY-MM-DD.
+     * @param {Date} date - The date object.
+     * @returns {string} - Formatted date string.
+     */
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Formats a time string to HH:MM.
+     * @param {Date} date - The date object.
+     * @returns {string} - Formatted time string.
+     */
+    function formatTime(date) {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    // --- Authentication Functions ---
+
+    /**
+     * Updates the UI based on authentication status.
+     * @param {boolean} isAuthenticated - True if user is authenticated, false otherwise.
+     * @param {string} [username=''] - The username if authenticated.
+     */
+    function updateAuthUI(isAuthenticated, username = '') {
+        if (isAuthenticated) {
+            authOverlay.style.display = 'none';
+            mainAppContent.style.display = 'flex';
+            welcomeMessage.textContent = `Welcome, @${username}!`;
+            fetchTasks(); // Fetch tasks when logged in
+            fetchNotes(); // Fetch notes when logged in
+            renderCalendar(currentMonth, currentYear); // Render calendar on login
+            updateDigitalClock(); // Start digital clock
+            fetchFunFact(); // Fetch a fun fact
         } else {
-            const offset = circumference - (activeTasks / totalTasks) * circumference;
-            progressRingProgress.style.strokeDashoffset = offset;
+            authOverlay.style.display = 'flex';
+            mainAppContent.style.display = 'none';
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            loginUsernameInput.value = '';
+            loginPasswordInput.value = '';
+            registerUsernameInput.value = '';
+            registerPasswordInput.value = '';
         }
     }
 
-    function formatDueDate(isoDateString) {
-        if (!isoDateString) return '';
-        const date = new Date(isoDateString);
-        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
-        return date.toLocaleDateString(undefined, options);
-    }
-
-    function getDueDateStatus(isoDateString) {
-        if (!isoDateString) return '';
-
-        const dueDate = new Date(isoDateString);
-        const now = new Date();
-
-        const diffMs = dueDate.getTime() - now.getTime();
-        const oneDayMs = 24 * 60 * 60 * 1000;
-
-        if (diffMs < 0) {
-            return 'overdue';
-        } else if (diffMs < oneDayMs) {
-            return 'due-soon';
-        }
-        return '';
-    }
-
-    function updateDailySummaryAndStreak(allTasks) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        let completedTodayCount = 0;
-        let totalTasksDueTodayOrBefore = 0; // Renamed for clarity
-
-        allTasks.forEach(task => {
-            if (task.dueDate) {
-                const dueDate = new Date(task.dueDate);
-                dueDate.setHours(0,0,0,0);
-                if (dueDate.getTime() <= today.getTime() && task.isActive) {
-                    totalTasksDueTodayOrBefore++;
-                }
-            }
-
-            if (!task.isActive && task.completedAt) {
-                const completedDate = new Date(task.completedAt);
-                completedDate.setHours(0, 0, 0, 0);
-                if (completedDate.getTime() === today.getTime()) {
-                    completedTodayCount++;
-                }
-            }
-        });
-
-        tasksCompletedTodaySpan.textContent = completedTodayCount;
-        tasksTotalTodaySpan.textContent = totalTasksDueTodayOrBefore;
-
-        // --- Basic Client-side Streak Logic ---
-        let currentStreak = parseInt(localStorage.getItem('currentStreak')) || 0;
-        let lastStreakDate = localStorage.getItem('lastStreakDate');
-        const todayStr = today.toISOString().substring(0, 10);
-
-        if (totalTasksDueTodayOrBefore > 0 && completedTodayCount === totalTasksDueTodayOrBefore) {
-             if (lastStreakDate !== todayStr) {
-                const lastDateObj = new Date(lastStreakDate);
-                lastDateObj.setHours(0,0,0,0);
-
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
-                yesterstoday.setHours(0,0,0,0);
-
-                if (lastDateObj.getTime() === yesterday.getTime()) {
-                    currentStreak++;
-                } else {
-                    currentStreak = 1;
-                }
-                localStorage.setItem('currentStreak', currentStreak);
-                localStorage.setItem('lastStreakDate', todayStr);
-                currentStreakSpan.classList.add('streak-celebration');
-                setTimeout(() => {
-                    currentStreakSpan.classList.remove('streak-celebration');
-                }, 1000);
-            }
-        } else if (totalTasksDueTodayOrBefore > 0 && completedTodayCount < totalTasksDueTodayOrBefore) {
-            if (lastStreakDate && lastStreakDate !== todayStr) {
-                const lastDateObj = new Date(lastStreakDate);
-                lastDateObj.setHours(0,0,0,0);
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
-                yesterday.setHours(0,0,0,0);
-
-                if (lastDateObj.getTime() === yesterday.getTime()) {
-                     currentStreak = 0;
-                     localStorage.setItem('currentStreak', currentStreak);
-                     currentStreakSpan.classList.add('broken');
-                     localStorage.removeItem('lastStreakDate');
-                }
-            }
-        } else if (totalTasksDueTodayOrBefore === 0 && completedTodayCount === 0 && lastStreakDate && lastStreakDate !== todayStr) {
-            const lastDateObj = new Date(lastStreakDate);
-            lastDateObj.setHours(0,0,0,0);
-            const yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
-            yesterday.setHours(0,0,0,0);
-
-            if (lastDateObj.getTime() !== yesterday.getTime() && lastDateObj.getTime() !== today.getTime()) {
-                currentStreak = 0;
-                localStorage.setItem('currentStreak', currentStreak);
-                currentStreakSpan.classList.add('broken');
-                localStorage.removeItem('lastStreakDate');
-            }
-        } else if (totalTasksDueTodayOrBefore === 0 && completedTodayCount === 0 && !lastStreakDate) {
-             currentStreak = 0;
-             localStorage.setItem('currentStreak', currentStreak);
-             currentStreakSpan.classList.remove('broken');
-        }
-
-        currentStreakSpan.textContent = currentStreak;
-        if (currentStreak === 0) {
-             currentStreakSpan.classList.add('broken');
-        } else {
-             currentStreakSpan.classList.remove('broken');
+    /**
+     * Checks authentication status with the backend.
+     */
+    async function checkAuth() {
+        try {
+            const data = await apiRequest(`${BACKEND_URL}/check_auth`, 'GET');
+            updateAuthUI(data.authenticated, data.username);
+        } catch (error) {
+            console.error("Authentication check failed:", error);
+            updateAuthUI(false);
         }
     }
 
+    /**
+     * Handles user login.
+     */
+    async function handleLogin() {
+        const username = loginUsernameInput.value;
+        const password = loginPasswordInput.value;
+        try {
+            const data = await apiRequest(`${BACKEND_URL}/login`, 'POST', { username, password });
+            updateAuthUI(true, data.username);
+        } catch (error) {
+            // Error handling is already in apiRequest, but can add specific UI feedback here
+        }
+    }
 
-    function renderTasks(tasksToDisplay) {
-        taskListDiv.innerHTML = '';
+    /**
+     * Handles user registration.
+     */
+    async function handleRegister() {
+        const username = registerUsernameInput.value;
+        const password = registerPasswordInput.value;
+        try {
+            const data = await apiRequest(`${BACKEND_URL}/register`, 'POST', { username, password });
+            updateAuthUI(true, data.username);
+        } catch (error) {
+            // Error handling is already in apiRequest
+        }
+    }
 
-        const sortedTasks = [...tasksToDisplay].sort((a, b) => {
+    /**
+     * Handles user logout.
+     */
+    async function handleLogout() {
+        try {
+            await apiRequest(`${BACKEND_URL}/logout`, 'POST');
+            updateAuthUI(false);
+        } catch (error) {
+            // Error handling is already in apiRequest
+        }
+    }
+
+    // --- Task Management Functions ---
+
+    /**
+     * Fetches tasks from the backend and renders them.
+     */
+    async function fetchTasks() {
+        try {
+            const tasks = await apiRequest(`${BACKEND_URL}/tasks`, 'GET');
+            renderTasks(tasks);
+            updateTaskSummary(tasks);
+            updateDailySummary(tasks);
+        } catch (error) {
+            console.error("Failed to fetch tasks:", error);
+        }
+    }
+
+    /**
+     * Renders tasks in the task list.
+     * @param {Array<object>} tasks - List of task objects.
+     */
+    function renderTasks(tasks) {
+        taskList.innerHTML = ''; // Clear existing tasks
+
+        // Sort tasks: active first, then by due date (earliest first), then by creation date
+        tasks.sort((a, b) => {
+            // Active tasks first
             if (a.isActive && !b.isActive) return -1;
             if (!a.isActive && b.isActive) return 1;
 
-            if (a.dueDate && b.dueDate) {
-                return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-            }
-            if (a.dueDate) return -1;
-            if (b.dueDate) return 1;
-            return 0;
+            // Then by due date (earliest first)
+            const dateA = a.dueDate ? new Date(a.dueDate) : null;
+            const dateB = b.dueDate ? new Date(b.dueDate) : null;
+
+            if (dateA && dateB) return dateA - dateB;
+            if (dateA) return -1; // a has due date, b doesn't
+            if (dateB) return 1;  // b has due date, a doesn't
+
+            return 0; // No due dates or both have due dates and are equal
         });
 
-        sortedTasks.forEach(task => {
+        tasks.forEach(task => {
             const taskItem = document.createElement('div');
             taskItem.classList.add('task-item');
-            if (!task.isActive) {
-                taskItem.classList.add('completed');
+            taskItem.dataset.taskId = task.id;
+
+            const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+            const now = new Date();
+            let dueDateClass = '';
+            let dueText = '';
+
+            if (dueDate) {
+                const diffTime = dueDate.getTime() - now.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (task.isActive) { // Only apply status if task is active
+                    if (diffDays <= 0 && dueDate.toDateString() !== now.toDateString()) { // Overdue (past today, not just today)
+                        dueDateClass = 'overdue';
+                        dueText = `Overdue: ${formatDate(dueDate)} ${formatTime(dueDate)}`;
+                    } else if (diffDays <= 3) { // Due soon (within 3 days)
+                        dueDateClass = 'due-soon';
+                        dueText = `Due: ${formatDate(dueDate)} ${formatTime(dueDate)}`;
+                    } else {
+                        dueText = `Due: ${formatDate(dueDate)} ${formatTime(dueDate)}`;
+                    }
+                } else { // Task is completed, just show original due date
+                    dueText = `Due: ${formatDate(dueDate)} ${formatTime(dueDate)}`;
+                }
             }
 
-            const dueDateStatus = getDueDateStatus(task.dueDate);
-            if (dueDateStatus) {
-                taskItem.classList.add(dueDateStatus);
-            }
-
-            taskItem.dataset.id = task.id;
-
-            const displayDueDate = formatDueDate(task.dueDate);
+            taskItem.classList.add(dueDateClass);
 
             taskItem.innerHTML = `
                 <div class="task-info">
-                    <span class="task-name">${task.name}</span>
-                    <span class="task-category">${task.category}</span>
-                    ${displayDueDate ? `<span class="task-due-date">Due: ${displayDueDate}</span>` : ''}
+                    <div class="task-name">${task.name}</div>
+                    <div class="task-category">${task.category}</div>
+                    ${dueDate ? `<div class="task-due-date">${dueText}</div>` : ''}
                 </div>
                 <div class="task-status">
-                    ${task.isActive && task.timeLeft ? `<span class="time-left">${task.timeLeft}</span>` : ''}
-                    ${task.isActive ? `<span class="status-label active">active</span>` : ''}
+                    <span class="status-label ${task.isActive ? 'active' : ''}">${task.isActive ? 'ACTIVE' : 'COMPLETED'}</span>
                     <input type="checkbox" class="task-checkbox" ${!task.isActive ? 'checked' : ''}>
-                    <button class="delete-task-button">X</button>
-                </div>
-                <div class="edit-mode-container" style="display: none;">
-                    <input type="text" class="edit-input task-name-input" value="${task.name}">
-                    <input type="text" class="edit-input task-category-input" value="${task.category}">
-                    <input type="date" class="edit-input task-due-date-input" value="${task.dueDate ? task.dueDate.substring(0, 10) : ''}">
-                    <input type="time" class="edit-input task-due-time-input" value="${task.dueDate ? task.dueDate.substring(11, 16) : ''}">
-                    <div class="edit-actions">
-                        <button class="edit-save-btn">Save</button>
-                        <button class="edit-cancel-btn">Cancel</button>
-                    </div>
+                    <button class="remove-task-btn">X</button>
                 </div>
             `;
-            taskListDiv.appendChild(taskItem);
+            taskList.appendChild(taskItem);
 
+            // Event listener for checkbox
             const checkbox = taskItem.querySelector('.task-checkbox');
-            checkbox.addEventListener('change', async (event) => {
-                const taskId = event.target.closest('.task-item').dataset.id;
-                const wasActive = task.isActive;
-
-                if (wasActive && event.target.checked) {
-                    taskItem.classList.add('completing');
-                    completeSound.play();
-
-                    setTimeout(async () => {
-                        await toggleTaskStatus(taskId);
-                    }, 350);
-                } else {
-                    await toggleTaskStatus(taskId);
+            checkbox.addEventListener('change', async (e) => {
+                const isChecked = e.target.checked;
+                const taskId = taskItem.dataset.taskId;
+                try {
+                    await apiRequest(`${BACKEND_URL}/tasks/${taskId}`, 'PUT', { isActive: !isChecked });
+                    if (isChecked) {
+                        taskItem.classList.add('completing');
+                        completionSound.play(); // Play sound on completion
+                        taskItem.addEventListener('animationend', () => {
+                            fetchTasks(); // Re-fetch tasks after animation to update UI
+                        }, { once: true });
+                    } else {
+                        fetchTasks(); // Re-fetch tasks immediately if unchecking
+                    }
+                } catch (error) {
+                    console.error("Error updating task status:", error);
                 }
             });
 
-            const deleteButton = taskItem.querySelector('.delete-task-button');
-            deleteButton.addEventListener('click', async (event) => {
-                const taskId = event.target.closest('.task-item').dataset.id;
-                await deleteTask(taskId);
+            // Event listener for in-line editing (click on task-info)
+            const taskInfo = taskItem.querySelector('.task-info');
+            taskInfo.addEventListener('click', () => {
+                startEditingTask(taskItem, task);
             });
 
-            const taskInfoDiv = taskItem.querySelector('.task-info');
-            const editModeContainer = taskItem.querySelector('.edit-mode-container');
-            const taskNameInput = taskItem.querySelector('.task-name-input');
-            const taskCategoryInput = taskItem.querySelector('.task-category-input');
-            const taskDueDateInput = taskItem.querySelector('.task-due-date-input');
-            const taskDueTimeInput = taskItem.querySelector('.task-due-time-input');
-            const saveBtn = taskItem.querySelector('.edit-save-btn');
-            const cancelBtn = taskItem.querySelector('.edit-cancel-btn');
-
-            const enterEditMode = () => {
-                taskItem.classList.add('editing');
-                taskItem.querySelector('.task-info').style.display = 'none';
-                taskItem.querySelector('.task-status').style.display = 'none';
-                editModeContainer.style.display = 'block';
-                taskNameInput.focus();
-            };
-
-            const exitEditMode = () => {
-                taskItem.classList.remove('editing');
-                taskItem.querySelector('.task-info').style.display = 'flex';
-                taskItem.querySelector('.task-status').style.display = 'flex';
-                editModeContainer.style.display = 'none';
-            };
-
-            taskInfoDiv.addEventListener('click', enterEditMode);
-
-            saveBtn.addEventListener('click', async () => {
-                const taskId = taskItem.dataset.id;
-                const newName = taskNameInput.value.trim();
-                const newCategory = taskCategoryInput.value.trim();
-                const newDueDate = taskDueDateInput.value;
-                const newDueTime = taskDueTimeInput.value;
-
-                if (newName === '') {
-                    alert('Task name cannot be empty!');
-                    return;
+            // Event listener for remove button
+            const removeBtn = taskItem.querySelector('.remove-task-btn');
+            removeBtn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent triggering task-info click
+                const taskId = taskItem.dataset.taskId;
+                if (confirm('Are you sure you want to delete this task?')) { // Using confirm for now, replace with custom modal
+                    try {
+                        await apiRequest(`${BACKEND_URL}/tasks/${taskId}`, 'DELETE');
+                        fetchTasks(); // Refresh tasks after deletion
+                    } catch (error) {
+                        console.error("Error deleting task:", error);
+                    }
                 }
-
-                let combinedDueDate = null;
-                if (newDueDate && newDueTime) {
-                    combinedDueDate = `${newDueDate}T${newDueTime}:00`;
-                } else if (newDueDate) {
-                    combinedDueDate = `${newDueDate}T00:00:00`;
-                }
-
-                await updateTask(taskId, { name: newName, category: newCategory, dueDate: combinedDueDate });
-                exitEditMode();
-            });
-
-            cancelBtn.addEventListener('click', () => {
-                taskNameInput.value = task.name;
-                taskCategoryInput.value = task.category;
-                taskDueDateInput.value = task.dueDate ? task.dueDate.substring(0, 10) : '';
-                taskDueTimeInput.value = task.dueDate ? task.dueDate.substring(11, 16) : '';
-                exitEditMode();
-            });
-
-            taskNameInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
-                else if (e.key === 'Escape') { exitEditMode(); }
-            });
-            taskCategoryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
-                else if (e.key === 'Escape') { exitEditMode(); }
-            });
-            taskDueDateInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
-                else if (e.key === 'Escape') { exitEditMode(); }
-            });
-            taskDueTimeInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
-                else if (e.key === 'Escape') { exitEditMode(); }
             });
         });
-
-        updateProgress(tasksToDisplay);
-        updateDailySummaryAndStreak(tasksToDisplay);
     }
 
-    function renderCalendar() {
-        calendarGrid.innerHTML = '';
-        const today = new Date();
-        const currentMonth = currentCalendarDate.getMonth();
-        const currentYear = currentCalendarDate.getFullYear();
+    /**
+     * Updates the progress circle and tasks left count.
+     * @param {Array<object>} tasks - List of task objects.
+     */
+    function updateTaskSummary(tasks) {
+        const activeTasks = tasks.filter(task => task.isActive).length;
+        tasksLeftCount.textContent = activeTasks;
 
-        calendarMonthName.textContent = currentCalendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        const totalTasks = tasks.length;
+        const completedTasks = totalTasks - activeTasks;
 
-        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-        let startDay = firstDayOfMonth.getDay(); // 0 for Sunday, 1 for Monday...
+        const circumference = 2 * Math.PI * 50; // r=50 from SVG
+        progressCircle.style.strokeDasharray = circumference;
 
-        // Fill in leading empty days
-        for (let i = 0; i < startDay; i++) {
-            const emptyDay = document.createElement('div');
-            emptyDay.classList.add('calendar-day', 'inactive');
-            calendarGrid.appendChild(emptyDay);
+        if (totalTasks > 0) {
+            const progress = completedTasks / totalTasks;
+            const offset = circumference - (progress * circumference);
+            progressCircle.style.strokeDashoffset = offset;
+        } else {
+            progressCircle.style.strokeDashoffset = circumference; // Full circle if no tasks
+        }
+    }
+
+    /**
+     * Updates the daily completed tasks and streak.
+     * @param {Array<object>} tasks - List of task objects.
+     */
+    function updateDailySummary(tasks) {
+        const today = formatDate(new Date());
+        let completedToday = 0;
+        let totalToday = 0;
+
+        tasks.forEach(task => {
+            // Count tasks due today (active or completed)
+            if (task.dueDate && formatDate(new Date(task.dueDate)) === today) {
+                totalToday++;
+            }
+            // Count completed tasks for today
+            if (task.completedAt && formatDate(new Date(task.completedAt)) === today) {
+                completedToday++;
+            }
+        });
+
+        tasksCompletedTodaySpan.textContent = completedToday;
+        tasksTotalTodaySpan.textContent = totalToday;
+
+        // Streak logic (simplified for demonstration)
+        // This would ideally involve more complex logic to track historical completion
+        // For now, it's just checking if tasks were completed today.
+        if (completedToday > 0) {
+            if (!currentStreakSpan.classList.contains('streak-celebration')) {
+                currentStreak = (parseInt(localStorage.getItem('currentStreak') || '0') || 0) + 1;
+                localStorage.setItem('currentStreak', currentStreak);
+                currentStreakSpan.textContent = currentStreak;
+                currentStreakSpan.classList.remove('broken');
+                currentStreakSpan.classList.add('streak-celebration'); // Add animation
+            }
+        } else {
+            // Reset streak if no tasks completed today AND it's a new day since last check
+            const lastCheckDate = localStorage.getItem('lastStreakCheckDate');
+            if (lastCheckDate !== today) {
+                currentStreak = 0;
+                localStorage.setItem('currentStreak', currentStreak);
+                currentStreakSpan.textContent = currentStreak;
+                currentStreakSpan.classList.remove('streak-celebration');
+                currentStreakSpan.classList.add('broken');
+            }
+        }
+        localStorage.setItem('lastStreakCheckDate', today);
+        currentStreakSpan.textContent = localStorage.getItem('currentStreak') || '0';
+    }
+
+    /**
+     * Initiates in-line editing for a task.
+     * @param {HTMLElement} taskItem - The task item div.
+     * @param {object} taskData - The task object.
+     */
+    function startEditingTask(taskItem, taskData) {
+        taskItem.classList.add('editing');
+        taskItem.innerHTML = `
+            <input type="text" class="edit-input task-name-edit" value="${taskData.name}" placeholder="Task Name">
+            <input type="text" class="edit-input task-category-edit" value="${taskData.category || ''}" placeholder="Category">
+            <input type="date" class="edit-input task-due-date-edit" value="${taskData.dueDate ? formatDate(new Date(taskData.dueDate)) : ''}">
+            <input type="time" class="edit-input task-due-time-edit" value="${taskData.dueDate ? formatTime(new Date(taskData.dueDate)) : ''}">
+            <div class="edit-actions">
+                <button class="edit-save-btn">Save</button>
+                <button class="edit-cancel-btn">Cancel</button>
+            </div>
+        `;
+
+        const saveBtn = taskItem.querySelector('.edit-save-btn');
+        const cancelBtn = taskItem.querySelector('.edit-cancel-btn');
+        const nameInput = taskItem.querySelector('.task-name-edit');
+        const categoryInput = taskItem.querySelector('.task-category-edit');
+        const dueDateInput = taskItem.querySelector('.task-due-date-edit');
+        const dueTimeInput = taskItem.querySelector('.task-due-time-edit');
+
+        saveBtn.addEventListener('click', async () => {
+            const newName = nameInput.value;
+            const newCategory = categoryInput.value;
+            const newDueDate = dueDateInput.value;
+            const newDueTime = dueTimeInput.value;
+
+            let combinedDueDate = null;
+            if (newDueDate) {
+                combinedDueDate = newDueTime ? `${newDueDate}T${newDueTime}` : `${newDueDate}T00:00`;
+            }
+
+            try {
+                await apiRequest(`${BACKEND_URL}/tasks/${taskData.id}`, 'PUT', {
+                    name: newName,
+                    category: newCategory,
+                    dueDate: combinedDueDate
+                });
+                fetchTasks(); // Re-fetch to update UI
+            } catch (error) {
+                console.error("Error saving task edit:", error);
+            }
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            fetchTasks(); // Re-fetch to revert changes
+        });
+    }
+
+    /**
+     * Handles adding a new task.
+     */
+    async function handleAddTask() {
+        const name = newTaskNameInput.value.trim();
+        const category = newTaskCategoryInput.value.trim();
+        const dueDate = newTaskDueDateInput.value;
+        const dueTime = newTaskDueTimeInput.value;
+
+        if (!name) {
+            alert('Task name cannot be empty.');
+            return;
         }
 
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        let combinedDueDate = null;
+        if (dueDate) {
+            combinedDueDate = dueTime ? `${dueDate}T${dueTime}` : `${dueDate}T00:00`;
+        }
+
+        try {
+            await apiRequest(`${BACKEND_URL}/tasks`, 'POST', {
+                name: name,
+                category: category,
+                dueDate: combinedDueDate
+            });
+            newTaskNameInput.value = '';
+            newTaskCategoryInput.value = '';
+            newTaskDueDateInput.value = '';
+            newTaskDueTimeInput.value = '';
+            addTaskModalOverlay.style.display = 'none';
+            fetchTasks(); // Refresh tasks
+        } catch (error) {
+            console.error("Error adding task:", error);
+        }
+    }
+
+    // --- Calendar Functions ---
+
+    /**
+     * Renders the calendar for a given month and year.
+     * @param {number} month - Month (0-11).
+     * @param {number} year - Full year.
+     */
+    function renderCalendar(month, year) {
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+        monthNameDisplay.textContent = `${monthNames[month]} ${year}`;
+        calendarGrid.innerHTML = '';
+
+        const firstDay = new Date(year, month, 1).getDay(); // 0 for Sunday, 1 for Monday, etc.
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+        const todayDate = today.getDate();
+        const todayMonth = today.getMonth();
+        const todayYear = today.getFullYear();
+
+        // Add blank days for the start of the month
+        for (let i = 0; i < firstDay; i++) {
+            const blankDay = document.createElement('div');
+            blankDay.classList.add('calendar-day', 'inactive');
+            calendarGrid.appendChild(blankDay);
+        }
+
+        // Add days of the month
         for (let day = 1; day <= daysInMonth; day++) {
             const dayElement = document.createElement('div');
             dayElement.classList.add('calendar-day');
             dayElement.textContent = day;
 
-            if (day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
+            if (day === todayDate && month === todayMonth && year === todayYear) {
                 dayElement.classList.add('today');
             }
             calendarGrid.appendChild(dayElement);
         }
     }
 
-    function changeMonth(delta) {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
-        renderCalendar();
-    }
+    // --- Digital Clock Functions ---
 
-    function updateClock() {
+    /**
+     * Updates the digital clock display.
+     */
+    function updateDigitalClock() {
         const now = new Date();
         let hours = now.getHours();
-        let minutes = now.getMinutes();
-        let seconds = now.getSeconds();
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
         let ampm = '';
 
-        if (is12HourFormat) {
+        const format = timeFormatSelect.value;
+
+        if (format === '12') {
             ampm = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12;
-            hours = hours ? hours : 12; // The hour '0' (midnight) should be '12' in 12-hour format
+            hours = hours ? hours : 12; // The hour '0' should be '12'
         }
 
-        hours = String(hours).padStart(2, '0');
-        minutes = String(minutes).padStart(2, '0');
-        seconds = String(seconds).padStart(2, '0');
-
-        digitalClockDiv.innerHTML = `${hours}:${minutes}:${seconds} ${is12HourFormat ? `<span class="ampm">${ampm}</span>` : ''}`;
+        digitalClock.innerHTML = `${String(hours).padStart(2, '0')}:${minutes}:${seconds} <span class="ampm">${ampm}</span>`;
     }
 
-    async function generateFunFact() {
-        funFactDisplay.textContent = "Loading a cool fact...";
+    // --- Fun Fact Functions ---
+
+    /**
+     * Fetches a fun fact from the API.
+     */
+    async function fetchFunFact() {
         try {
             const response = await fetch(USELESS_FACTS_API_URL);
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText || response.statusText}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            if (data && data.text) {
-                funFactDisplay.textContent = data.text;
-            } else {
-                funFactDisplay.textContent = "Fact found, but content is empty.";
-            }
+            funFactDisplay.textContent = data.text;
         } catch (error) {
-            console.error('Error fetching fun fact:', error);
-            funFactDisplay.textContent = "Oops! Couldn't load a fact. Check your internet or try again!";
+            console.error("Failed to fetch fun fact:", error);
+            funFactDisplay.textContent = "Failed to load fun fact. Please try again.";
         }
     }
 
-    // --- API Interaction Functions ---
+    // --- New: Notes Management Functions ---
 
-    async function fetchAndRenderTasks() {
+    /**
+     * Switches the view between tasks and notes.
+     * @param {string} view - 'tasks' or 'notes'.
+     */
+    function switchView(view) {
+        if (view === 'tasks') {
+            tasksView.style.display = 'flex';
+            notesView.style.display = 'none';
+            fetchTasks(); // Refresh tasks when returning to tasks view
+        } else if (view === 'notes') {
+            tasksView.style.display = 'none';
+            notesView.style.display = 'flex';
+            fetchNotes(); // Fetch and render notes when switching to notes view
+        }
+    }
+
+    /**
+     * Fetches notes from the backend and renders them.
+     */
+    async function fetchNotes() {
         try {
-            const response = await fetch(`${BACKEND_URL}/tasks`, {credentials: 'include'});
-            if (!response.ok) {
-                if (response.status === 401) {
-                    showAuthOverlay();
-                    return;
-                }
-                // Handle non-2xx but not 401 statuses gracefully
-                const errorText = await response.text();
-                console.error('Error fetching tasks:', errorText);
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
-            }
-            const tasks = await response.json();
-            renderTasks(tasks);
+            const notes = await apiRequest(`${BACKEND_URL}/notes`, 'GET');
+            renderNotes(notes);
         } catch (error) {
-            console.error('Error fetching tasks:', error);
-            alert('Failed to load tasks. Please ensure the backend server is running and you are logged in. ' + error.message);
-            showAuthOverlay();
+            console.error("Failed to fetch notes:", error);
         }
     }
 
-    function showAddTaskModal() {
-        const modalOverlay = document.createElement('div');
-        modalOverlay.classList.add('add-task-modal-overlay');
-        modalOverlay.innerHTML = `
-            <div class="add-task-modal">
-                <h3>Add New Task</h3>
-                <input type="text" id="modal-task-name" placeholder="Task Name" required>
-                <input type="text" id="modal-task-category" placeholder="Category (e.g., Work)">
-                <input type="date" id="modal-due-date">
-                <input type="time" id="modal-due-time">
-                <div class="add-task-modal-actions">
-                    <button class="cancel-btn">Cancel</button>
-                    <button class="save-btn">Add Task</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modalOverlay);
+    /**
+     * Renders notes in the notes display area, grouped by category.
+     * @param {Array<object>} notes - List of note objects.
+     */
+    function renderNotes(notes) {
+        notesDisplayArea.innerHTML = ''; // Clear existing notes
 
-        const modalTaskName = document.getElementById('modal-task-name');
-        const modalTaskCategory = document.getElementById('modal-task-category');
-        const modalDueDate = document.getElementById('modal-due-date');
-        const modalDueTime = document.getElementById('modal-due-time');
-        const saveButton = modalOverlay.querySelector('.save-btn');
-        const cancelButton = modalOverlay.querySelector('.cancel-btn');
-
-        modalTaskName.focus();
-
-        saveButton.addEventListener('click', async () => {
-            const name = modalTaskName.value.trim();
-            const category = modalTaskCategory.value.trim() || 'Uncategorized';
-            const dueDate = modalDueDate.value;
-            const dueTime = modalDueTime.value;
-
-            if (!name) {
-                alert('Task name is required!');
-                return;
+        const notesByCategory = {};
+        notes.forEach(note => {
+            const category = note.category || 'Uncategorized';
+            if (!notesByCategory[category]) {
+                notesByCategory[category] = [];
             }
+            notesByCategory[category].push(note);
+        });
 
-            let combinedDueDate = null;
-            if (dueDate && dueTime) {
-                combinedDueDate = `${dueDate}T${dueTime}:00`;
-            } else if (dueDate) {
-                combinedDueDate = `${dueDate}T00:00:00`;
-            }
+        // Sort categories alphabetically
+        const sortedCategories = Object.keys(notesByCategory).sort();
 
-            try {
-                const response = await fetch(`${BACKEND_URL}/tasks`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        category: category,
-                        dueDate: combinedDueDate,
-                    }),
-                    credentials: 'include'
+        sortedCategories.forEach(category => {
+            // Create category heading
+            const categoryHeading = document.createElement('h3');
+            categoryHeading.classList.add('note-category-heading');
+            categoryHeading.textContent = category.toUpperCase();
+            notesDisplayArea.appendChild(categoryHeading);
+
+            // Create container for notes within this category
+            const categoryNotesContainer = document.createElement('div');
+            categoryNotesContainer.classList.add('category-notes-container');
+            notesDisplayArea.appendChild(categoryNotesContainer);
+
+            // Sort notes within each category by date (newest first)
+            notesByCategory[category].sort((a, b) => new Date(b.noteDate) - new Date(a.noteDate));
+
+            notesByCategory[category].forEach(note => {
+                const noteItem = document.createElement('div');
+                noteItem.classList.add('note-item');
+                noteItem.dataset.noteId = note.id;
+
+                const noteDate = note.noteDate ? new Date(note.noteDate) : new Date(note.createdAt);
+
+                noteItem.innerHTML = `
+                    <div class="note-info-display">
+                        <div class="note-topic">${note.topic}</div>
+                        <div class="note-date-display">${formatDate(noteDate)}</div>
+                        <div class="note-content-preview">${note.content || 'No content preview available.'}</div>
+                    </div>
+                    <div class="note-actions">
+                        <button class="note-edit-btn">Edit</button>
+                        <button class="note-delete-btn">Delete</button>
+                    </div>
+                `;
+                categoryNotesContainer.appendChild(noteItem);
+
+                // Event listener for editing a note
+                const editBtn = noteItem.querySelector('.note-edit-btn');
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent parent click from triggering
+                    openNoteModalForEdit(note);
                 });
 
-                if (!response.ok) {
-                    if (response.status === 401) { alert('You need to be logged in to add tasks.'); showAuthOverlay(); }
-                    const errorText = await response.text();
-                    console.error('Error adding task:', errorText);
-                    throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
-                }
-
-                modalOverlay.remove();
-                await fetchAndRenderTasks();
-
-            } catch (error) {
-                console.error('Error adding task:', error);
-                alert('Failed to add task. Please try again. ' + error.message);
-            }
-        });
-
-        cancelButton.addEventListener('click', () => {
-            modalOverlay.remove();
-        });
-
-        modalOverlay.addEventListener('click', (event) => {
-            if (event.target === modalOverlay) {
-                modalOverlay.remove();
-            }
-        });
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && document.body.contains(modalOverlay)) {
-                modalOverlay.remove();
-            }
-        });
-    }
-
-    async function updateTask(id, updates) {
-        try {
-            const response = await fetch(`${BACKEND_URL}/tasks/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updates),
-                credentials: 'include'
+                // Event listener for deleting a note
+                const deleteBtn = noteItem.querySelector('.note-delete-btn');
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation(); // Prevent parent click from triggering
+                    if (confirm('Are you sure you want to delete this note?')) { // Using confirm for simplicity
+                        try {
+                            await apiRequest(`${BACKEND_URL}/notes/${note.id}`, 'DELETE');
+                            fetchNotes(); // Refresh notes after deletion
+                        } catch (error) {
+                            console.error("Error deleting note:", error);
+                        }
+                    }
+                });
             });
-
-            if (!response.ok) {
-                if (response.status === 401) { alert('You need to be logged in to update tasks.'); showAuthOverlay(); }
-                else if (response.status === 404) { alert('Task not found or you are not authorized to update it.'); }
-                const errorText = await response.text();
-                console.error('Error updating task:', errorText);
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
-            }
-
-            fetchAndRenderTasks();
-
-        } catch (error) {
-            console.error('Error updating task:', error);
-            alert('Failed to update task. Please try again. ' + error.message);
-        }
+        });
     }
 
-    async function toggleTaskStatus(id) {
+    /**
+     * Opens the note modal for adding a new note.
+     */
+    function openNoteModalForAdd() {
+        noteModalTitle.textContent = 'Add New Note';
+        noteIdField.value = ''; // Clear ID for new note
+        noteTopicInput.value = '';
+        noteDateInput.value = formatDate(new Date()); // Default to today
+        noteCategorySelect.value = 'General';
+        noteContentTextarea.value = '';
+        addNoteModalOverlay.style.display = 'flex';
+    }
+
+    /**
+     * Opens the note modal for editing an existing note.
+     * @param {object} note - The note object to edit.
+     */
+    function openNoteModalForEdit(note) {
+        noteModalTitle.textContent = 'Edit Note';
+        noteIdField.value = note.id;
+        noteTopicInput.value = note.topic;
+        noteDateInput.value = note.noteDate ? formatDate(new Date(note.noteDate)) : '';
+        noteCategorySelect.value = note.category || 'General';
+        noteContentTextarea.value = note.content;
+        addNoteModalOverlay.style.display = 'flex';
+    }
+
+    /**
+     * Handles saving a new or updated note.
+     */
+    async function handleSaveNote() {
+        const noteId = noteIdField.value;
+        const topic = noteTopicInput.value.trim();
+        const noteDate = noteDateInput.value;
+        const category = noteCategorySelect.value;
+        const content = noteContentTextarea.value.trim();
+
+        if (!topic || !noteDate) {
+            alert('Note topic and date are required.');
+            return;
+        }
+
+        const noteData = {
+            topic: topic,
+            noteDate: noteDate,
+            category: category,
+            content: content
+        };
+
         try {
-            const currentTasksResponse = await fetch(`${BACKEND_URL}/tasks`, {credentials: 'include'});
-            if (!currentTasksResponse.ok) {
-                const errorText = await currentTasksResponse.text();
-                console.error('Error fetching current tasks for toggle:', errorText);
-                throw new Error(`HTTP error! status: ${currentTasksResponse.status} - ${errorText.substring(0,100)}...`);
-            }
-            const currentTasks = await currentTasksResponse.json();
-            const taskToUpdate = currentTasks.find(task => task.id === parseInt(id));
-
-            if (!taskToUpdate) {
-                console.error('Task not found for toggling status:', id);
-                return;
-            }
-
-            const newStatus = !taskToUpdate.isActive;
-            const updates = { isActive: newStatus };
-            if (newStatus === false) {
-                updates.completedAt = new Date().toISOString();
+            if (noteId) {
+                // Update existing note
+                await apiRequest(`${BACKEND_URL}/notes/${noteId}`, 'PUT', noteData);
             } else {
-                updates.completedAt = null;
+                // Add new note
+                await apiRequest(`${BACKEND_URL}/notes`, 'POST', noteData);
             }
-
-            const response = await fetch(`${BACKEND_URL}/tasks/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updates),
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) { alert('You need to be logged in to change task status.'); showAuthOverlay(); }
-                else if (response.status === 404) { alert('Task not found or you are not authorized to change its status.'); }
-                const errorText = await response.text();
-                console.error('Error toggling task status:', errorText);
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
-            }
-
-            fetchAndRenderTasks();
-
+            addNoteModalOverlay.style.display = 'none';
+            fetchNotes(); // Refresh notes
         } catch (error) {
-            console.error('Error toggling task status:', error);
-            alert('Failed to update task status. Please try again. ' + error.message);
+            console.error("Error saving note:", error);
         }
     }
 
-    async function deleteTask(id) {
-        if (!confirm('Are you sure you want to delete this task?')) {
-            return;
-        }
+    // --- Event Listeners ---
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/tasks/${id}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) { alert('You need to be logged in to delete tasks.'); showAuthOverlay(); }
-                else if (response.status === 404) { alert('Task not found or you are not authorized to delete it.'); }
-                const errorText = await response.text();
-                console.error('Error deleting task:', errorText);
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
-            }
-
-            await fetchAndRenderTasks();
-
-        } catch (error) {
-                console.error('Error deleting task:', error);
-            alert('Failed to delete task. Please try again. ' + error.message);
-        }
-    }
-
-    // --- Authentication Functions ---
-
-    function showAuthOverlay() {
-        authOverlay.style.display = 'flex';
-        mainAppContent.style.display = 'none';
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
-        loginUsernameInput.focus();
-        welcomeMessageDiv.textContent = ''; // Clear welcome message on logout/show auth
-    }
-
-    function hideAuthOverlay() {
-        authOverlay.style.display = 'none';
-        mainAppContent.style.display = 'flex';
-    }
-
-    async function handleLogin() {
-        const username = loginUsernameInput.value.trim();
-        const password = loginPasswordInput.value.trim();
-
-        if (!username || !password) {
-            alert('Please enter both username and password.');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${BACKEND_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                let errorMessage = 'Login failed';
-                const responseText = await response.text(); // Read the body ONCE as text
-
-                try {
-                    const errorData = JSON.parse(responseText);
-                    errorMessage = errorData.error || errorMessage;
-                } catch (jsonParseError) {
-                    console.error("Server responded with non-JSON for login error:", responseText);
-                    errorMessage = `Login failed: Unexpected server response (status: ${response.status}). Check console for details.`;
-                }
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json(); // Parse successful login response
-            alert('Login successful!');
-            welcomeMessageDiv.textContent = `Welcome, ${data.username}!`; // Display welcome message
-            hideAuthOverlay();
-            await fetchAndRenderTasks();
-            renderCalendar();
-            updateClock();
-            generateFunFact();
-            loginUsernameInput.value = '';
-            loginPasswordInput.value = '';
-
-        } catch (error) {
-            console.error('Login error:', error);
-            alert(`Login failed: ${error.message}`);
-        }
-    }
-
-    async function handleRegister() {
-        const username = registerUsernameInput.value.trim();
-        const password = registerPasswordInput.value.trim();
-
-        if (!username || !password) {
-            alert('Please enter both username and password.');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${BACKEND_URL}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                let errorMessage = 'Registration failed';
-                const responseText = await response.text(); // Read the body ONCE as text
-
-                try {
-                    const errorData = JSON.parse(responseText);
-                    errorMessage = errorData.error || errorMessage;
-                } catch (jsonParseError) {
-                    console.error("Server responded with non-JSON for registration error:", responseText);
-                    errorMessage = `Registration failed: Unexpected server response (status: ${response.status}). Check console for details.`;
-                }
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json(); // Parse successful registration response
-            alert('Registration successful! You are now logged in.');
-            welcomeMessageDiv.textContent = `Welcome, ${data.username}!`; // Display welcome message
-            hideAuthOverlay();
-            await fetchAndRenderTasks();
-            renderCalendar();
-            updateClock();
-            generateFunFact();
-            registerUsernameInput.value = '';
-            registerPasswordInput.value = '';
-
-        } catch (error) {
-            console.error('Registration error:', error);
-            alert(`Registration failed: ${error.message}`);
-        }
-    }
-
-    async function handleLogout() {
-        try {
-            const response = await fetch(`${BACKEND_URL}/logout`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Error logging out:', errorText);
-                throw new Error(`Logout failed: HTTP error! status: ${response.status} - ${errorText.substring(0,100)}...`);
-            }
-
-            alert('Logged out successfully.');
-            showAuthOverlay();
-            taskListDiv.innerHTML = '';
-            tasksLeftCountSpan.textContent = '0';
-            tasksCompletedTodaySpan.textContent = '0';
-            tasksTotalTodaySpan.textContent = '0';
-            currentStreakSpan.textContent = '0';
-            currentStreakSpan.classList.add('broken');
-            welcomeMessageDiv.textContent = ''; // Clear welcome message on logout
-
-        } catch (error) {
-            console.error('Logout error:', error);
-            alert('Logout failed. Please try again. ' + error.message);
-        }
-    }
-
-
-    // --- Initial Check and Event Listeners ---
-
-    async function checkAuthenticationStatus() {
-        try {
-            const response = await fetch(`${BACKEND_URL}/check_auth`, {credentials: 'include'});
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Error checking authentication status:', errorText);
-                throw new Error(`Auth check failed: status ${response.status} - ${errorText.substring(0,100)}...`);
-            }
-            const data = await response.json();
-            if (data.authenticated) {
-                welcomeMessageDiv.textContent = `Welcome, ${data.username}!`; // Display welcome message
-                hideAuthOverlay();
-                await fetchAndRenderTasks();
-                renderCalendar();
-                updateClock();
-                generateFunFact();
-            } else {
-                showAuthOverlay();
-            }
-        } catch (error) {
-            console.error('Error checking authentication status:', error);
-            alert('Failed to check authentication status. ' + error.message);
-            showAuthOverlay();
-        }
-    }
-
-    loginButton.addEventListener('click', handleLogin);
-    registerButton.addEventListener('click', handleRegister);
-    logoutButton.addEventListener('click', handleLogout); // Event listener for the new logout button position
-
+    // Auth
     showRegisterLink.addEventListener('click', (e) => {
         e.preventDefault();
         loginForm.style.display = 'none';
         registerForm.style.display = 'block';
-        registerUsernameInput.focus();
     });
 
     showLoginLink.addEventListener('click', (e) => {
         e.preventDefault();
         registerForm.style.display = 'none';
         loginForm.style.display = 'block';
-        loginUsernameInput.focus();
     });
 
-    loginUsernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loginPasswordInput.focus(); } });
-    loginPasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleLogin(); } });
-    registerUsernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); registerPasswordInput.focus(); } });
-    registerPasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleRegister(); } });
+    loginButton.addEventListener('click', handleLogin);
+    registerButton.addEventListener('click', handleRegister);
+    logoutButton.addEventListener('click', handleLogout);
 
-
-    addtaskButton.addEventListener('click', showAddTaskModal);
-
-    prevMonthBtn.addEventListener('click', () => changeMonth(-1));
-    nextMonthBtn.addEventListener('click', () => changeMonth(1));
-
-    timeFormatSelect.addEventListener('change', (event) => {
-        is12HourFormat = event.target.value === '12';
-        updateClock();
+    // Tasks
+    addTaskButton.addEventListener('click', () => {
+        addTaskModalOverlay.style.display = 'flex';
+        newTaskNameInput.value = '';
+        newTaskCategoryInput.value = '';
+        newTaskDueDateInput.value = '';
+        newTaskDueTimeInput.value = '';
     });
 
-    generateFactButton.addEventListener('click', generateFunFact);
+    cancelNewTaskBtn.addEventListener('click', () => {
+        addTaskModalOverlay.style.display = 'none';
+    });
 
+    saveNewTaskBtn.addEventListener('click', handleAddTask);
 
-    // Initial checks and setup
-    checkAuthenticationStatus();
-    setInterval(updateClock, 1000);
-    setInterval(fetchAndRenderTasks, 60 * 1000); // Refresh tasks every minute
-    currentStreakSpan.textContent = parseInt(localStorage.getItem('currentStreak')) || 0;
+    // Calendar
+    prevMonthBtn.addEventListener('click', () => {
+        currentMonth--;
+        if (currentMonth < 0) {
+            currentMonth = 11;
+            currentYear--;
+        }
+        renderCalendar(currentMonth, currentYear);
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+        currentMonth++;
+        if (currentMonth > 11) {
+            currentMonth = 0;
+            currentYear++;
+        }
+        renderCalendar(currentMonth, currentYear);
+    });
+
+    // Digital Clock
+    setInterval(updateDigitalClock, 1000); // Update every second
+    timeFormatSelect.addEventListener('change', updateDigitalClock);
+
+    // Fun Fact
+    generateFactButton.addEventListener('click', fetchFunFact);
+
+    // New: Notes Feature Event Listeners
+    showNotesButton.addEventListener('click', () => switchView('notes'));
+    backToTasksButton.addEventListener('click', () => switchView('tasks'));
+    addNoteButton.addEventListener('click', openNoteModalForAdd);
+    saveNoteBtn.addEventListener('click', handleSaveNote);
+    cancelNoteBtn.addEventListener('click', () => {
+        addNoteModalOverlay.style.display = 'none';
+    });
+
+    // --- Initial Load ---
+    checkAuth(); // Check authentication status on page load
 });

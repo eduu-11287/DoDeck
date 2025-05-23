@@ -32,12 +32,47 @@
         </div>
     </div>
 
+    <div class="add-task-modal-overlay" id="add-task-modal-overlay" style="display: none;">
+        <div class="add-task-modal">
+            <h3>Add New Task</h3>
+            <input type="text" id="new-task-name" placeholder="Task Name" required>
+            <input type="text" id="new-task-category" placeholder="Category (e.g., Work, Personal)">
+            <input type="date" id="new-task-due-date">
+            <input type="time" id="new-task-due-time">
+            <div class="add-task-modal-actions">
+                <button class="save-btn" id="save-new-task-btn">Save Task</button>
+                <button class="cancel-btn" id="cancel-new-task-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="add-note-modal-overlay" id="add-note-modal-overlay" style="display: none;">
+        <div class="add-note-modal">
+            <h3 id="note-modal-title">Add New Note</h3>
+            <input type="hidden" id="note-id-field"> <input type="text" id="note-topic" placeholder="Note Topic" required>
+            <input type="date" id="note-date" required>
+            <select id="note-category" class="note-category-select">
+                <option value="General">General</option>
+                <option value="Work">Work</option>
+                <option value="Personal">Personal</option>
+                <option value="Food">Food</option>
+                <option value="Ideas">Ideas</option>
+            </select>
+            <textarea id="note-content" placeholder="Write your note here..." rows="8"></textarea>
+            <div class="add-note-modal-actions">
+                <button class="save-btn" id="save-note-btn">Save Note</button>
+                <button class="cancel-btn" id="cancel-note-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
     <div class="app-container" id="main-app-content" style="display: none;">
         <div class="panel left-panel">
             <h1 class="betterlist-logo">BETTERLIST</h1>
         </div>
 
-        <div class="panel middle-panel">
+        <div class="panel middle-panel" id="tasks-view">
             <div id="welcome-message" class="welcome-message"></div>
             <h2 class="panel-title">TO-DO LIST</h2>
             <div class="tasks-summary">
@@ -61,6 +96,7 @@
 
             <div class="task-actions-bottom">
                 <button id="logout-button" class="action-button logout-button">Logout</button>
+                <button id="show-notes-button" class="action-button notes-button">Notes</button>
                 <button class="add-task-button action-button">+</button>
             </div>
         </div>
@@ -89,6 +125,17 @@
             </div>
             <button id="generate-fact-button">Generate Fact</button>
         </div>
+
+        <div class="panel middle-panel notes-view" id="notes-view" style="display: none;">
+            <h2 class="panel-title">YOUR NOTES</h2>
+            <div class="notes-display-area" id="notes-display-area">
+                </div>
+            <div class="note-actions-bottom">
+                <button id="back-to-tasks-button" class="action-button back-button">Back to Tasks</button>
+                <button id="add-note-button" class="action-button add-note-button">+</button>
+            </div>
+        </div>
+
     </div>
     <script src="static/js/script.js"></script>
 </body>

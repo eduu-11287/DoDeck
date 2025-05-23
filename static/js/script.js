@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Formats a date string toYYYY-MM-DD.
+     * Formats a date string to YYYY-MM-DD.
      * @param {Date} date - The date object.
      * @returns {string} - Formatted date string.
      */
@@ -264,6 +264,11 @@ document.addEventListener('DOMContentLoaded', () => {
             taskItem.classList.add('task-item');
             taskItem.dataset.taskId = task.id;
 
+            // Add 'completed' class if the task is not active (i.e., completed)
+            if (!task.isActive) {
+                taskItem.classList.add('completed');
+            }
+
             const dueDate = task.dueDate ? new Date(task.dueDate) : null;
             const now = new Date();
             let dueDateClass = '';
@@ -288,7 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            taskItem.classList.add(dueDateClass);
+            // Apply due date class only if the task is active
+            if (task.isActive) {
+                taskItem.classList.add(dueDateClass);
+            }
+
 
             taskItem.innerHTML = `
                 <div class="task-info">
@@ -297,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${dueDate ? `<div class="task-due-date">${dueText}</div>` : ''}
                 </div>
                 <div class="task-status">
-                    <span class="status-label ${task.isActive ? 'active' : ''}">${task.isActive ? 'ACTIVE' : 'COMPLETED'}</span>
+                    <span class="status-label ${task.isActive ? 'active' : 'completed-status'}">${task.isActive ? 'ACTIVE' : 'COMPLETED'}</span>
                     <input type="checkbox" class="task-checkbox" ${!task.isActive ? 'checked' : ''}>
                     <button class="remove-task-btn">X</button>
                 </div>
@@ -311,18 +320,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskId = taskItem.dataset.taskId;
                 try {
                     await apiRequest(`${BACKEND_URL}/tasks/${taskId}`, 'PUT', { isActive: !isChecked });
+                    // No direct DOM manipulation for strikethrough/status here,
+                    // as fetchTasks() will re-render the entire list with the updated state.
                     if (isChecked) {
-                        taskItem.classList.add('completing');
                         completionSound.play(); // Play sound on completion
-                        taskItem.addEventListener('animationend', () => {
-                            fetchTasks(); // Re-fetch tasks after animation to update UI
-                        }, { once: true });
-                    } else {
-                        fetchTasks(); // Re-fetch tasks immediately if unchecking
                     }
+                    fetchTasks(); // Re-fetch tasks after status update
                 }
                 catch (error) {
                     console.error("Error updating task status:", error);
+                    // Revert checkbox state if API call fails
+                    e.target.checked = !isChecked;
                 }
             });
 
@@ -337,13 +345,11 @@ document.addEventListener('DOMContentLoaded', () => {
             removeBtn.addEventListener('click', async (e) => {
                 e.stopPropagation(); // Prevent triggering task-info click
                 const taskId = taskItem.dataset.taskId;
-                if (confirm('Are you sure you want to delete this task?')) { // Using confirm for now, replace with custom modal
-                    try {
-                        await apiRequest(`${BACKEND_URL}/tasks/${taskId}`, 'DELETE');
-                        fetchTasks(); // Refresh tasks after deletion
-                    } catch (error) {
-                        console.error("Error deleting task:", error);
-                    }
+                try {
+                    await apiRequest(`${BACKEND_URL}/tasks/${taskId}`, 'DELETE');
+                    fetchTasks(); // Refresh tasks after deletion
+                } catch (error) {
+                    console.error("Error deleting task:", error);
                 }
             });
         });

@@ -243,6 +243,12 @@ body {
     color: #1a1a1a;
 }
 
+/* New: Styles for completed status label */
+.status-label.completed-status {
+    background-color: #555; /* Gray background for completed status */
+    color: #eee; /* Lighter text for completed status */
+}
+
 .time-left {
     font-size: 0.9em;
     color: #00FF00;
@@ -615,6 +621,19 @@ body {
     box-shadow: 0 0 10px rgba(255, 0, 0, 0.2); /* Red glow */
 }
 
+/* New: Styles for completed tasks */
+.task-item.completed {
+    opacity: 0.7; /* Slightly faded */
+    background-color: #2a2a2a; /* Darker background for completed tasks */
+    border: 1px solid #444; /* Subtle border */
+}
+
+.task-item.completed .task-name,
+.task-item.completed .task-category,
+.task-item.completed .task-due-date {
+    text-decoration: line-through; /* Strikethrough text */
+    color: #888; /* Gray out text */
+}
 
 /* Styles for Add Task Modal (new structure) */
 .add-task-modal-overlay {
@@ -745,16 +764,17 @@ body {
 }
 
 /* Task Completion Animation */
-.task-item.completing {
+/* Removed the 'task-complete' animation as tasks should now stay visible */
+/* .task-item.completing {
     animation: task-complete 0.4s ease-out forwards;
-    pointer-events: none; /* Disable clicks during animation */
+    pointer-events: none;
 }
 
 @keyframes task-complete {
     0% {
         opacity: 1;
         transform: translateY(0) scale(1);
-        height: auto; /* Use auto for height transition */
+        height: auto;
         padding-top: 15px;
         padding-bottom: 15px;
         margin-bottom: 10px;
@@ -770,9 +790,9 @@ body {
         padding-top: 0;
         padding-bottom: 0;
         margin-bottom: 0;
-        overflow: hidden; /* Hide overflow during collapse */
+        overflow: hidden;
     }
-}
+} */
 
 /* Daily Summary & Streak Styling */
 .tasks-today-summary {
@@ -1410,7 +1430,7 @@ body {
 
     .betterlist-logo {
         transform: none; /* No rotation on mobile */
-        font-size: 2.5em; /* Smaller on mobile */
+        font-size: 2.5em;
         text-align: center;
         white-space: normal;
         margin-bottom: 15px; /* Adjust margin for mobile */
@@ -1495,15 +1515,21 @@ body {
         font-size: 1.1em;
     }
 
-    /* Notes specific mobile adjustments */
-    .note-item {
-        flex-direction: column; /* Stack content on small screens */
-        align-items: flex-start;
+    /* Notes modal for very small screens */
+    .add-note-modal {
+        padding: 20px;
+        gap: 10px;
     }
-    .note-actions {
-        width: 100%;
-        justify-content: flex-end;
-        margin-top: 10px;
+    .add-note-modal h3 {
+        font-size: 1.5em;
+    }
+    .add-note-modal input,
+    .add-note-modal select,
+    .add-note-modal textarea {
+        padding: 10px;
+    }
+    .add-note-modal-actions button {
+        padding: 8px 15px;
     }
 }
 

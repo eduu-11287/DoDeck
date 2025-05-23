@@ -69,7 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMonth = new Date().getMonth();
     let currentYear = new Date().getFullYear();
     let currentStreak = 0; // Initialize streak
-    let completionSound = new Audio('static/sounds/ding.mp3'); // Path to your sound file
+    // Ensure the sound file path is correct relative to the static folder
+    let completionSound = new Audio('static/sounds/ding.mp3'); 
 
     // --- Utility Functions ---
 
@@ -106,13 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("API Request Failed:", error);
             // Implement a more user-friendly error display here
-            alert(`Error: ${error.message}`); // Using alert for simplicity, replace with custom modal
+            // Using alert for simplicity, replace with custom modal
+            alert(`Error: ${error.message}`); 
             throw error;
         }
     }
 
     /**
-     * Formats a date string to YYYY-MM-DD.
+     * Formats a date string toYYYY-MM-DD.
      * @param {Date} date - The date object.
      * @returns {string} - Formatted date string.
      */
@@ -145,7 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAuthenticated) {
             authOverlay.style.display = 'none';
             mainAppContent.style.display = 'flex';
-            welcomeMessage.textContent = `Welcome, @${username}!`;
+            // Fix: Ensure welcome message is correctly formatted
+            welcomeMessage.textContent = `Welcome, @${username}!`; 
             fetchTasks(); // Fetch tasks when logged in
             fetchNotes(); // Fetch notes when logged in
             renderCalendar(currentMonth, currentYear); // Render calendar on login
@@ -317,7 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         fetchTasks(); // Re-fetch tasks immediately if unchecking
                     }
-                } catch (error) {
+                }
+                catch (error) {
                     console.error("Error updating task status:", error);
                 }
             });
@@ -395,27 +399,29 @@ document.addEventListener('DOMContentLoaded', () => {
         // This would ideally involve more complex logic to track historical completion
         // For now, it's just checking if tasks were completed today.
         if (completedToday > 0) {
-            if (!currentStreakSpan.classList.contains('streak-celebration')) {
+            // Only increment streak if it's a new day or if streak was 0 and tasks completed today
+            const lastStreakDate = localStorage.getItem('lastStreakDate');
+            if (lastStreakDate !== today) {
                 currentStreak = (parseInt(localStorage.getItem('currentStreak') || '0') || 0) + 1;
                 localStorage.setItem('currentStreak', currentStreak);
-                currentStreakSpan.textContent = currentStreak;
-                currentStreakSpan.classList.remove('broken');
-                currentStreakSpan.classList.add('streak-celebration'); // Add animation
+                localStorage.setItem('lastStreakDate', today); // Update last streak date
             }
+            currentStreakSpan.classList.remove('broken');
+            currentStreakSpan.classList.add('streak-celebration'); // Add animation
         } else {
-            // Reset streak if no tasks completed today AND it's a new day since last check
-            const lastCheckDate = localStorage.getItem('lastStreakCheckDate');
-            if (lastCheckDate !== today) {
+            // Reset streak if no tasks completed today AND it's a new day since last streak update
+            const lastStreakDate = localStorage.getItem('lastStreakDate');
+            if (lastStreakDate && lastStreakDate !== today) { // If there was a streak and it's a new day
                 currentStreak = 0;
                 localStorage.setItem('currentStreak', currentStreak);
-                currentStreakSpan.textContent = currentStreak;
-                currentStreakSpan.classList.remove('streak-celebration');
-                currentStreakSpan.classList.add('broken');
+                localStorage.removeItem('lastStreakDate'); // Clear last streak date
             }
+            currentStreakSpan.classList.remove('streak-celebration');
+            currentStreakSpan.classList.add('broken');
         }
-        localStorage.setItem('lastStreakCheckDate', today);
         currentStreakSpan.textContent = localStorage.getItem('currentStreak') || '0';
     }
+
 
     /**
      * Initiates in-line editing for a task.
@@ -495,12 +501,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 category: category,
                 dueDate: combinedDueDate
             });
+            // Clear inputs and hide modal AFTER successful API call
             newTaskNameInput.value = '';
             newTaskCategoryInput.value = '';
             newTaskDueDateInput.value = '';
             newTaskDueTimeInput.value = '';
             addTaskModalOverlay.style.display = 'none';
-            fetchTasks(); // Refresh tasks
+            fetchTasks(); // Refresh tasks to display the new one and update summary
         } catch (error) {
             console.error("Error adding task:", error);
         }
@@ -823,8 +830,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // New: Notes Feature Event Listeners
     showNotesButton.addEventListener('click', () => switchView('notes'));
-    backToTasksButton.addEventListener('click', () => switchView('tasks'));
     addNoteButton.addEventListener('click', openNoteModalForAdd);
+    backToTasksButton.addEventListener('click', () => switchView('tasks'));
     saveNoteBtn.addEventListener('click', handleSaveNote);
     cancelNoteBtn.addEventListener('click', () => {
         addNoteModalOverlay.style.display = 'none';

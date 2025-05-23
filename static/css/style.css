@@ -18,7 +18,7 @@ body {
     height: 100vh; /* Full viewport height on larger screens */
     overflow: hidden; /* Keep this for the main container's internal layout */
     background-color: #1a1a1a; /* Dark background for the main app area */
-    border-radius: 20px; /* Slightly rounded corners for the app container */
+    border-radius: 20px;
     box-shadow: 0 0 50px rgba(0, 255, 0, 0.2); /* Soft neon green glow */
 }
 
@@ -489,7 +489,7 @@ body {
 
 /* New: Notes Button Styling */
 .notes-button {
-    background-color: #00FF00; /* Neon green */
+    background-color: #00FF00;
     color: #1a1a1a;
     border: none;
     padding: 10px 20px;
@@ -1113,13 +1113,16 @@ body {
     font-size: 1.3em;
     font-weight: 700;
     color: #00FF00; /* Neon green for category headings */
-    text-align: left;
+    text-align: center; /* Centered as requested */
     margin-top: 25px;
     margin-bottom: 15px;
     padding-left: 10px;
     border-bottom: 2px solid rgba(0, 255, 0, 0.3); /* Underline effect */
     padding-bottom: 5px;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5); /* Subtle glow */
+    font-style: italic; /* Italicized as requested */
+    font-family: 'Share Tech Mono', monospace; /* Fancy font as requested */
+    letter-spacing: 1px; /* Consistent with other titles */
 }
 
 .note-item {
@@ -1244,6 +1247,9 @@ body {
     font-weight: bold;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    display: flex; /* Enable flex for icon and text alignment */
+    align-items: center;
+    gap: 8px; /* Space between icon and text */
 }
 
 .back-button:hover {
@@ -1251,6 +1257,18 @@ body {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
     transform: translateY(-2px);
 }
+
+.back-arrow-icon {
+    width: 24px; /* Icon size */
+    height: 24px;
+    fill: #00FF00; /* Neon green color for the arrow */
+    transition: fill 0.2s;
+}
+
+.back-button:hover .back-arrow-icon {
+    fill: #00e600; /* Slightly darker green on hover */
+}
+
 
 /* Add/Edit Note Modal Styles (similar to add-task-modal) */
 .add-note-modal-overlay {

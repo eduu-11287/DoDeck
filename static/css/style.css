@@ -1185,7 +1185,6 @@ body {
     overflow: hidden; /* Hide overflowing text */
     text-overflow: ellipsis; /* Add ellipsis for overflow */
     display: -webkit-box;
-    -webkit-line-clamp: 3; /* Limit to 3 lines */
     -webkit-box-orient: vertical;
     margin-bottom: 10px;
 }
@@ -1426,7 +1425,7 @@ body {
 .search-icon {
     width: 28px; /* Size for the SVG icon itself */
     height: 28px;
-    fill: #1a1a1a; /* Dark fill to contrast with the green button */
+    
 }
 
 

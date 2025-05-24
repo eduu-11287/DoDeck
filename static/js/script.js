@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Render notes grouped by date
         for (const dateKey in notesByDate) {
-            const categoryHeading = document.createElement('h4');
+            const categoryHeading = document.createElement('h2');
             categoryHeading.classList.add('note-category-heading');
             categoryHeading.textContent = dateKey;
             notesDisplayArea.appendChild(categoryHeading);

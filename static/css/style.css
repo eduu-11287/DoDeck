@@ -1393,6 +1393,42 @@ body {
     transform: translateY(-1px);
 }
 
+/* New: Style for the container grouping search and add note buttons */
+.right-action-buttons {
+    display: flex;
+    gap: 15px; /* Space between the search button and add note button */
+    align-items: center; /* Align them vertically */
+}
+
+/* New: Styles for Search Button (similar to add-task-button but for notes) */
+.search-button {
+    background-color: #00FF00; /* Neon green */
+    color: #1a1a1a;
+    border: none;
+    border-radius: 50%; /* Circular */
+    width: 60px; /* Same size as add button */
+    height: 60px;
+    font-size: 2.5em; /* Icon size - though SVG will control this more directly */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.search-button:hover {
+    background-color: #00e600;
+    box-shadow: 0 8px 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.search-icon {
+    width: 28px; /* Size for the SVG icon itself */
+    height: 28px;
+    fill: #1a1a1a; /* Dark fill to contrast with the green button */
+}
+
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {

@@ -31,13 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const taskCategoryInput = document.getElementById('task-category-input');
     const taskDueDateInput = document.getElementById('task-due-date-input');
     const taskDueTimeInput = document.getElementById('task-due-time-input');
-    const tasksLeftCount = document.getElementById('tasks-left-count'); // Fixed typo
+    const tasksLeftCount = document.getElementById('tasks-left-count');
     let editingTaskId = null; // To store the ID of the task being edited
 
     // Progress circle elements
     const progressCircle = document.querySelector('.progress-ring-progress');
+    let circumference = 0; // Define circumference in a broader scope with a default value
     if (progressCircle) {
-        const circumference = 2 * Math.PI * progressCircle.r.baseVal.value;
+        circumference = 2 * Math.PI * progressCircle.r.baseVal.value;
         progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
         progressCircle.style.strokeDashoffset = circumference; // Start as full circle
     }
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tasksCompletedTodaySpan = document.getElementById('tasks-completed-today');
     const tasksTotalTodaySpan = document.getElementById('tasks-total-today');
     const currentStreakSpan = document.getElementById('current-streak');
-    const completionSound = new Audio('/static/completion_sound.mp3'); // Path to your sound file
+    const completionSound = new Audio('/static/completion_sound.mp3'); // Path to your sound file (currently missing)
 
     // Notes related elements
     const notesButton = document.getElementById('notes-button');
@@ -144,7 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showLoginLink.addEventListener('click', (e) => {
         e.preventDefault();
         registerSection.style.display = 'none';
-        loginSection.style.display = 'block'; // Fixed unclosed string
+        loginSection.style.display = 'block';
         loginMessage.textContent = ''; // Clear messages
         registerMessage.textContent = '';
     });
@@ -348,7 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     await apiRequest(`${BACKEND_URL}/tasks/${taskId}`, 'PUT', { isActive: !isChecked });
                     if (isChecked) {
-                        completionSound.play();
+                        // completionSound.play(); // Temporarily disabled due to missing file
                     }
                     fetchTasks(); // Re-fetch and re-render all tasks to update UI
                 } catch (error) {
@@ -533,7 +534,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             if (editingTaskId) {
-                // Not used with the current inline editing, but kept for future proofing
                 await apiRequest(`${BACKEND_URL}/tasks/${editingTaskId}`, 'PUT', taskData);
             } else {
                 await apiRequest(`${BACKEND_URL}/tasks`, 'POST', taskData);
@@ -792,7 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             dayCell.classList.add('calendar-day');
             dayCell.textContent = day;
 
-            if (dateid.getTime() === today.getTime()) { // Fixed typo: used dateid instead of date
+            if (dateid.getTime() === today.getTime()) {
                 dayCell.classList.add('today');
             }
             calendarGrid.appendChild(dayCell);

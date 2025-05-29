@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tasksCompletedTodaySpan = document.getElementById('tasks-completed-today');
     const tasksTotalTodaySpan = document.getElementById('tasks-total-today');
     const currentStreakSpan = document.getElementById('current-streak');
-    const completionSound = new Audio('/static/completion_sound.mp3'); // Path to your sound file (currently missing)
+    const completionSound = new Audio('/static/sounds/ding.mp3'); // Path to your sound file (currently missing)
 
     // Notes related elements
     const notesButton = document.getElementById('notes-button');

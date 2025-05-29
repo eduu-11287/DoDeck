@@ -1,11 +1,16 @@
 import os
 from flask_migrate import Migrate
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -29,7 +34,6 @@ migrate = Migrate(app, db)
 # If your frontend and backend are on *different* Render services, you MUST update this to your frontend URL.
 # Example: origins=["https://your-frontend-app.onrender.com"]
 CORS(app, supports_credentials=True, origins=["https://betterlist-7xgp.onrender.com"])
-
 
 # For SQLAlchemy to work with PostgreSQL on Render,
 # it often needs to know about SSL options.
@@ -116,7 +120,6 @@ class Note(db.Model):
             'userId': self.user_id
         }
 
-
 # --- Authentication Decorator ---
 def login_required(f):
     @wraps(f)
@@ -125,7 +128,6 @@ def login_required(f):
             return jsonify({"error": "Authentication required"}), 401
         return f(*args, **kwargs)
     return decorated_function
-
 
 # --- API Routes ---
 
@@ -185,7 +187,6 @@ def check_auth():
         if user:
             return jsonify({"authenticated": True, "userId": user.id, "username": user.username}), 200
     return jsonify({"authenticated": False}), 200
-
 
 # --- Task API Routes (Protected by login_required) ---
 
@@ -375,13 +376,11 @@ def get_streak():
             current_streak = 0
             streak_broken = True
 
-
     return jsonify({
         "current_streak": current_streak,
         "longest_streak": longest_streak,
         "streak_broken": streak_broken
     })
-
 
 # New: Note API Routes (Protected by login_required)
 @app.route('/notes', methods=['GET'])
@@ -466,6 +465,71 @@ def delete_note(note_id):
     db.session.commit()
     return jsonify({"message": "Note deleted successfully"}), 200
 
+# New: Download Notes as PDF
+@app.route('/download_notes', methods=['GET'])
+@login_required
+def download_notes():
+    user_id = session['user_id']
+    # Fetch notes, ordered by date (descending)
+    notes = Note.query.filter_by(user_id=user_id).order_by(Note.note_date.desc()).all()
+
+    if not notes:
+        return jsonify({"error": "No notes found to download"}), 404
+
+    # Create a PDF in memory using BytesIO
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    # Define custom styles for the PDF
+    topic_style = ParagraphStyle(
+        name='TopicStyle',
+        fontSize=16,  # Bigger font for topics
+        fontName='Helvetica-Bold',  # Bolder font
+        spaceAfter=6,
+        textColor=colors.black
+    )
+    date_style = ParagraphStyle(
+        name='DateStyle',
+        fontSize=12,  # Smaller font for dates
+        fontName='Helvetica',
+        spaceAfter=6,
+        textColor=colors.grey
+    )
+    content_style = ParagraphStyle(
+        name='ContentStyle',
+        fontSize=12,
+        fontName='Helvetica',
+        spaceAfter=12,
+        textColor=colors.black
+    )
+
+    # Build the PDF content
+    elements = []
+    elements.append(Paragraph("My Notes", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    for note in notes:
+        # Add topic (bigger and bold)
+        elements.append(Paragraph(note.topic, topic_style))
+        # Add date (smaller and regular)
+        elements.append(Paragraph(note.note_date.strftime('%B %d, %Y'), date_style))
+        # Add content
+        content = note.content.replace('\n', '<br/>')  # Preserve line breaks in PDF
+        elements.append(Paragraph(content, content_style))
+        elements.append(Spacer(1, 12))
+
+    # Build the PDF
+    doc.build(elements)
+
+    # Prepare the PDF for download
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='My_Notes.pdf',
+        mimetype='application/pdf'
+    )
 
 if __name__ == '__main__':
     with app.app_context():

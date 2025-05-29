@@ -84,8 +84,13 @@
                 </button>
                 <div class="right-action-buttons">
                     <button id="search-notes-button" class="action-button search-button">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"  class="search-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="search-icon">
                             <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm.966-1.03l4.894 4.894 1.414-1.414-4.894-4.894a7 7 0 11-1.414 1.414z"/>
+                        </svg>
+                    </button>
+                    <button id="download-notes-button" class="action-button download-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="download-icon">
+                            <path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-6 2v2h12v-2H6z"/>
                         </svg>
                     </button>
                     <button id="add-note-button" class="action-button add-note-button">+</button>
@@ -93,15 +98,14 @@
             </div>
         </div>
 
-
         <div class="panel right-panel">
             <h2 class="panel-title">INFO HUB</h2>
 
             <div id="calendar-container">
                 <div id="calendar-header">
-                    <button id="prevMonth">&lt;</button>
+                    <button id="prevMonth"><</button>
                     <h4 id="month-year"></h4>
-                    <button id="nextMonth">&gt;</button>
+                    <button id="nextMonth">></button>
                 </div>
                 <div id="calendar-weekdays">
                     <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>

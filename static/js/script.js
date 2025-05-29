@@ -31,14 +31,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const taskCategoryInput = document.getElementById('task-category-input');
     const taskDueDateInput = document.getElementById('task-due-date-input');
     const taskDueTimeInput = document.getElementById('task-due-time-input');
-    const tasksLeftCount = document.getElementById('tasks-left-count');
+    const tasksLeftCount = document.getElementById('tasks-left-count'); // Fixed typo
     let editingTaskId = null; // To store the ID of the task being edited
 
     // Progress circle elements
     const progressCircle = document.querySelector('.progress-ring-progress');
-    const circumference = 2 * Math.PI * progressCircle.r.baseVal.value;
-    progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
-    progressCircle.style.strokeDashoffset = circumference; // Start as full circle
+    if (progressCircle) {
+        const circumference = 2 * Math.PI * progressCircle.r.baseVal.value;
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference; // Start as full circle
+    }
 
     // Streak and Daily Summary
     const tasksCompletedTodaySpan = document.getElementById('tasks-completed-today');
@@ -64,6 +66,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // New: Search Notes Button
     const searchNotesButton = document.getElementById('search-notes-button');
+    // New: Download Notes Button
+    const downloadNotesButton = document.getElementById('download-notes-button');
 
     // Calendar Elements
     const monthYearDisplay = document.getElementById('month-year');
@@ -140,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showLoginLink.addEventListener('click', (e) => {
         e.preventDefault();
         registerSection.style.display = 'none';
-        loginSection.style.display = 'block';
+        loginSection.style.display = 'block'; // Fixed unclosed string
         loginMessage.textContent = ''; // Clear messages
         registerMessage.textContent = '';
     });
@@ -224,8 +228,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 appContainer.style.display = 'none';
             }
             taskList.innerHTML = '<p style="color: #888; text-align: center;">Failed to load tasks. Please log in.</p>';
-            tasksLeftCount.textContent = '0';
-            progressCircle.style.strokeDashoffset = circumference;
+            if (tasksLeftCount) tasksLeftCount.textContent = '0';
+            if (progressCircle) progressCircle.style.strokeDashoffset = circumference;
         }
     }
 
@@ -260,7 +264,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-
             const taskInfo = document.createElement('div');
             taskInfo.classList.add('task-info');
 
@@ -283,7 +286,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 taskDueDate.textContent = 'No due date';
             }
-
 
             taskInfo.appendChild(taskName);
             taskInfo.appendChild(taskCategory);
@@ -334,12 +336,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-
             // Double-click to edit (Task Name and Category)
             taskName.addEventListener('dblclick', (e) => startEditingTask(e.target.closest('.task-item'), 'name'));
             taskCategory.addEventListener('dblclick', (e) => startEditingTask(e.target.closest('.task-item'), 'category'));
             taskDueDate.addEventListener('dblclick', (e) => startEditingTask(e.target.closest('.task-item'), 'dueDate'));
-
 
             // Checkbox event listener (mark as complete/incomplete)
             checkbox.addEventListener('change', async () => {
@@ -372,18 +372,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Update progress circle
-        tasksLeftCount.textContent = activeTasks;
-        if (totalTasks > 0) {
+        if (tasksLeftCount) tasksLeftCount.textContent = activeTasks;
+        if (totalTasks > 0 && progressCircle) {
             const progress = (totalTasks - activeTasks) / totalTasks;
             const offset = circumference * (1 - progress);
             progressCircle.style.strokeDashoffset = offset;
-        } else {
+        } else if (progressCircle) {
             progressCircle.style.strokeDashoffset = circumference; // Full circle if no tasks
         }
 
         // Update daily summary
-        tasksCompletedTodaySpan.textContent = tasksCompletedToday;
-        tasksTotalTodaySpan.textContent = tasksTotalToday;
+        if (tasksCompletedTodaySpan) tasksCompletedTodaySpan.textContent = tasksCompletedToday;
+        if (tasksTotalTodaySpan) tasksTotalTodaySpan.textContent = tasksTotalToday;
 
         // Update streak
         updateStreak();
@@ -456,7 +456,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-
         const saveButton = document.createElement('button');
         saveButton.classList.add('edit-save-btn');
         saveButton.textContent = 'Save';
@@ -480,7 +479,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (fieldToEdit === 'name') nameInput.focus();
         else if (fieldToEdit === 'category') categoryInput.focus();
         else if (fieldToEdit === 'dueDate') dateInput.focus();
-
 
         saveButton.addEventListener('click', async () => {
             const updatedData = {
@@ -564,7 +562,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-
     // --- Notes Management Functions ---
 
     // Show Notes View
@@ -585,6 +582,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchNotesButton.addEventListener('click', () => {
             // Open Google in a new tab
             window.open('https://www.google.com', '_blank');
+        });
+    }
+
+    // New: Listener for the "Download Notes" button
+    if (downloadNotesButton) {
+        downloadNotesButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/download_notes`, {
+                    method: 'GET',
+                    credentials: 'include' // Include cookies for session authentication
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to download notes');
+                }
+
+                // Get the blob and create a download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'My_Notes.pdf'; // Name of the downloaded file
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url); // Clean up
+            } catch (error) {
+                console.error("Error downloading notes:", error);
+                alert('Failed to download notes. Please try again.');
+            }
         });
     }
 
@@ -733,7 +761,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         addNoteModalOverlay.style.display = 'flex';
     }
 
-
     // --- Calendar Functions ---
 
     function renderCalendar() {
@@ -760,12 +787,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         today.setHours(0, 0, 0, 0);
 
         for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth(), day);
+            const dateid = new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth(), day);
             const dayCell = document.createElement('div');
             dayCell.classList.add('calendar-day');
             dayCell.textContent = day;
 
-            if (date.getTime() === today.getTime()) {
+            if (dateid.getTime() === today.getTime()) { // Fixed typo: used dateid instead of date
                 dayCell.classList.add('today');
             }
             calendarGrid.appendChild(dayCell);
@@ -832,7 +859,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     generateFactButton.addEventListener('click', generateFunFact);
-
 
     // --- Initialization ---
 

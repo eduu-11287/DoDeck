@@ -1649,3 +1649,25 @@ body {
         padding: 8px 15px;
     }
 }
+
+/* Download Button */
+.download-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.download-button:hover {
+    transform: scale(1.1);
+}
+
+.download-icon {
+    width: 24px;
+    height: 24px;
+    fill: #ffffff;
+}

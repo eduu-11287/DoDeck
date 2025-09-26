@@ -585,37 +585,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // New: Listener for the "Download Notes" button
-    if (downloadNotesButton) {
-        downloadNotesButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch(`${BACKEND_URL}/download_notes`, {
-                    method: 'GET',
-                    credentials: 'include' // Include cookies for session authentication
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to download notes');
-                }
-
-                // Get the blob and create a download link
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'My_Notes.pdf'; // Name of the downloaded file
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url); // Clean up
-            } catch (error) {
-                console.error("Error downloading notes:", error);
-                alert('Failed to download notes. Please try again.');
-            }
-        });
-    }
-
     async function fetchNotes() {
         try {
             const notes = await apiRequest(`${BACKEND_URL}/notes`);
@@ -838,27 +807,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     timeFormatSelect.addEventListener('change', updateDigitalClock); // Update when format changes
 
     // --- Fun Fact Functions ---
-    const funFacts = [
-        "A group of owls is called a parliament.",
-        "The shortest war in history lasted only 38 to 45 minutes.",
-        "Honey never spoils.",
-        "The scientific name for the brain is 'encephalon'.",
-        "A cloud weighs around 1.1 million pounds.",
-        "Bananas are berries, but strawberries are not.",
-        "The Great Wall of China is not visible from space with the naked eye.",
-        "Humans share 50% of their DNA with bananas.",
-        "The average person walks the equivalent of three times around the world in a lifetime.",
-        "There are more possible iterations of a game of chess than there are atoms in the known universe.",
-        "The first alarm clock could only ring at 4 AM.",
-        "Cats have 32 muscles in each ear."
-    ];
-
-    function generateFunFact() {
-        const randomIndex = Math.floor(Math.random() * funFacts.length);
-        funFactDisplay.textContent = funFacts[randomIndex];
+    async function generateFunFact() {
+        try {
+            const response = await fetch("https://official-joke-api.appspot.com/random_joke");
+            if (!response.ok) {
+                throw new Error("Failed to fetch a joke");
+            }
+            const data = await response.json();
+            
+            // The API returns { setup: "...", punchline: "..." }
+            funFactDisplay.textContent = `${data.setup} — ${data.punchline}`;
+        } catch (error) {
+            funFactDisplay.textContent = "Oops! Couldn't fetch a joke right now.";
+            console.error(error);
+        }
     }
-
+    
     generateFactButton.addEventListener('click', generateFunFact);
+    
 
     // --- Initialization ---
 

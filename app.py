@@ -465,71 +465,7 @@ def delete_note(note_id):
     db.session.commit()
     return jsonify({"message": "Note deleted successfully"}), 200
 
-# New: Download Notes as PDF
-@app.route('/download_notes', methods=['GET'])
-@login_required
-def download_notes():
-    user_id = session['user_id']
-    # Fetch notes, ordered by date (descending)
-    notes = Note.query.filter_by(user_id=user_id).order_by(Note.note_date.desc()).all()
-
-    if not notes:
-        return jsonify({"error": "No notes found to download"}), 404
-
-    # Create a PDF in memory using BytesIO
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    styles = getSampleStyleSheet()
-
-    # Define custom styles for the PDF
-    topic_style = ParagraphStyle(
-        name='TopicStyle',
-        fontSize=16,  # Bigger font for topics
-        fontName='Helvetica-Bold',  # Bolder font
-        spaceAfter=6,
-        textColor=colors.black
-    )
-    date_style = ParagraphStyle(
-        name='DateStyle',
-        fontSize=12,  # Smaller font for dates
-        fontName='Helvetica',
-        spaceAfter=6,
-        textColor=colors.grey
-    )
-    content_style = ParagraphStyle(
-        name='ContentStyle',
-        fontSize=12,
-        fontName='Helvetica',
-        spaceAfter=12,
-        textColor=colors.black
-    )
-
-    # Build the PDF content
-    elements = []
-    elements.append(Paragraph("My Notes", styles['Title']))
-    elements.append(Spacer(1, 12))
-
-    for note in notes:
-        # Add topic (bigger and bold)
-        elements.append(Paragraph(note.topic, topic_style))
-        # Add date (smaller and regular)
-        elements.append(Paragraph(note.note_date.strftime('%B %d, %Y'), date_style))
-        # Add content
-        content = note.content.replace('\n', '<br/>')  # Preserve line breaks in PDF
-        elements.append(Paragraph(content, content_style))
-        elements.append(Spacer(1, 12))
-
-    # Build the PDF
-    doc.build(elements)
-
-    # Prepare the PDF for download
-    buffer.seek(0)
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name='My_Notes.pdf',
-        mimetype='application/pdf'
-    )
+#
 
 if __name__ == '__main__':
     with app.app_context():

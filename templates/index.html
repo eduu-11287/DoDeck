@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetterList - ToDo App</title>
+    <title>My Diary</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
@@ -12,7 +12,7 @@
 
     <div id="auth-overlay" class="auth-overlay">
         <div class="auth-modal">
-            <h2>Welcome to BetterList</h2>
+            <h2>Welcome to My Diary</h2>
             <p>Your ultimate productivity companion.</p>
 
             <div id="login-section" class="auth-form">
@@ -37,7 +37,7 @@
 
     <div class="app-container">
         <div class="panel left-panel">
-            <h1 class="betterlist-logo">BETTERLIST</h1>
+            <h1 class="betterlist-logo">My Diary</h1>
         </div>
 
         <div id="tasks-view" class="panel middle-panel">
@@ -103,7 +103,7 @@
 
             <div id="calendar-container">
                 <div id="calendar-header">
-                    <button id="prevMonth"><</button>
+                    <button id="prevMonth"></button>
                     <h4 id="month-year"></h4>
                     <button id="nextMonth">></button>
                 </div>

@@ -465,12 +465,11 @@ def delete_note(note_id):
     db.session.commit()
     return jsonify({"message": "Note deleted successfully"}), 200
 
-#
 
 if __name__ == '__main__':
+    import os
     with app.app_context():
-        # This will create tables if they don't exist when running locally.
-        # For Render, use 'flask db migrate' and 'flask db upgrade' for schema changes.
-        db.create_all()
+         db.create_all()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
 
-    app.run(debug=True)

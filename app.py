@@ -73,13 +73,31 @@ class Task(db.Model):
     name = db.Column(db.String(120), nullable=False)
     category = db.Column(db.String(80), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-    time_left = db.Column(db.String(20), nullable=True) # Unused in current frontend, can be removed if not needed
     due_date = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     def __repr__(self):
         return f'<Task {self.id}: {self.name} (User: {self.user_id}) - Active: {self.is_active} - Due: {self.due_date} - Completed: {self.completed_at}>'
+
+    @property
+    def time_left(self):
+        if self.due_date and self.is_active:
+            now = datetime.datetime.now()
+            delta = self.due_date - now
+            if delta.total_seconds() > 0:
+                days = delta.days
+                hours = delta.seconds // 3600
+                minutes = (delta.seconds % 3600) // 60
+                if days > 0:
+                    return f"{days}d {hours}h"
+                elif hours > 0:
+                    return f"{hours}h {minutes}m"
+                else:
+                    return f"{minutes}m"
+            else:
+                return "Overdue"
+        return None
 
     def to_dict(self):
         return {
@@ -344,8 +362,7 @@ def get_streak():
         current_streak = 0
         streak_broken = True
 
-    # If today has no completed tasks and yesterday did, the streak is broken for today.
-    # Check if a task was completed today. If not, and there was a streak leading up to yesterday, it's broken.
+    # If today has no completed tasks, determine if streak is broken
     tasks_completed_today_count = Task.query.filter_by(
         user_id=user_id,
         is_active=False
@@ -354,25 +371,11 @@ def get_streak():
     ).count()
 
     if tasks_completed_today_count == 0:
-        if (today - datetime.timedelta(days=1)) in completed_dates:
-            # If yesterday had completions, but today doesn't, streak is broken.
+        if completed_dates and completed_dates[-1] == today - datetime.timedelta(days=1):
+            # Streak ended yesterday, keep the current_streak value
             streak_broken = True
-            # The current streak in this scenario should represent the streak *ending yesterday*.
-            # We need to re-calculate current_streak ending at yesterday.
-            temp_current_streak = 0
-            temp_last_date = None
-            for date in completed_dates:
-                if date > today - datetime.timedelta(days=1): # Stop at yesterday
-                    break
-                if temp_last_date is None or (date - temp_last_date).days == 1:
-                    temp_current_streak += 1
-                elif (date - temp_last_date).days > 1:
-                    temp_current_streak = 1
-                temp_last_date = date
-            current_streak = temp_current_streak if temp_last_date else 0
-            
-        else:
-            # No completions today and no completions yesterday, so streak is 0
+        elif not completed_dates or completed_dates[-1] < today - datetime.timedelta(days=1):
+            # No completions or last completion was before yesterday
             current_streak = 0
             streak_broken = True
 
@@ -472,4 +475,3 @@ if __name__ == '__main__':
          db.create_all()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-

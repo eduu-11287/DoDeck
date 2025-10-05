@@ -191,15 +191,16 @@ body {
 }
 
 .task-item {
-    background-color: #333333; /* Darker background for task cards */
+    background-color: #333333;
     border-radius: 10px;
-    padding: 15px 20px;
-    margin-bottom: 15px;
+    padding: 20px 25px; /* Increased from 15px 20px */
+    margin-bottom: 20px; /* Increased from 15px */
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    min-height: 80px; /* Added minimum height */
 }
 
 .task-item:hover {
@@ -210,18 +211,22 @@ body {
 .task-info {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    gap: 5px;
 }
 
 .task-name {
-    font-size: 1.1em;
+    font-size: 1.3em; /* Increased from 1.1em */
     font-weight: 600;
     color: #fff;
-    margin-bottom: 5px;
+    margin-bottom: 8px; /* Increased from 5px */
+    line-height: 1.4; /* Added for better readability */
 }
 
 .task-category {
-    font-size: 0.8em;
+    font-size: 0.95em; /* Increased from 0.8em */
     color: #aaa;
+    margin-bottom: 5px; /* Added spacing */
 }
 
 .task-status {
@@ -599,9 +604,9 @@ body {
 
 /* Styles for Due Dates & Statuses */
 .task-due-date {
-    font-size: 0.85em;
-    color: #00e600; /* Default due date color (slightly darker green) */
-    margin-top: 5px; /* Space from category */
+    font-size: 0.95em; /* Increased from 0.85em */
+    color: #00e600;
+    margin-top: 8px; /* Increased from 5px */
     font-weight: 500;
 }
 
@@ -766,7 +771,7 @@ body {
 
 /* Task Completion Animation */
 /* Removed the 'task-complete' animation as tasks should now stay visible */
-/* .task-item.completing {
+ .task-item.completing {
     animation: task-complete 0.4s ease-out forwards;
     pointer-events: none;
 }

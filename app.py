@@ -7,10 +7,7 @@ import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -27,12 +24,6 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'a_very_secure_and_random_sec
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# Configure CORS to allow credentials (cookies for sessions)
-# Explicitly allow your Render frontend URL for production.
-# For local development, 'http://127.0.0.1:5000' or '*' might be used.
-# Make sure this matches your actual deployed frontend URL.
-# If your frontend and backend are on *different* Render services, you MUST update this to your frontend URL.
-# Example: origins=["https://your-frontend-app.onrender.com"]
 CORS(app, supports_credentials=True, origins=["https://betterlist-7xgp.onrender.com"])
 
 # For SQLAlchemy to work with PostgreSQL on Render,
@@ -82,22 +73,40 @@ class Task(db.Model):
 
     @property
     def time_left(self):
-        if self.due_date and self.is_active:
-            now = datetime.datetime.now()
-            delta = self.due_date - now
-            if delta.total_seconds() > 0:
-                days = delta.days
-                hours = delta.seconds // 3600
-                minutes = (delta.seconds % 3600) // 60
-                if days > 0:
-                    return f"{days}d {hours}h"
-                elif hours > 0:
-                    return f"{hours}h {minutes}m"
-                else:
-                    return f"{minutes}m"
+        if not self.due_date:
+            return None
+            
+        if not self.is_active:
+            return None
+        
+        now = datetime.datetime.now()
+        delta = self.due_date - now
+        
+        # Overdue
+        if delta.total_seconds() < 0:
+            days_overdue = abs(delta.days)
+            if days_overdue == 0:
+                return "Overdue today"
+            elif days_overdue == 1:
+                return "Overdue by 1 day"
             else:
-                return "Overdue"
-        return None
+                return f"Overdue by {days_overdue} days"
+        
+        # Due today or tomorrow
+        total_hours = delta.total_seconds() / 3600
+        
+        if total_hours < 24:
+            if total_hours < 1:
+                minutes = int(delta.total_seconds() / 60)
+                return f"Due in {minutes} minutes"
+            else:
+                hours = int(total_hours)
+                return f"Due in {hours} hour{'s' if hours != 1 else ''}"
+        elif total_hours < 48:
+            return "Due tomorrow"
+        else:
+            days = delta.days
+            return f"Due in {days} days"
 
     def to_dict(self):
         return {
@@ -240,7 +249,7 @@ def add_task():
                 due_datetime = datetime.datetime.combine(due_date, due_time)
             else:
                 # If only date, set time to midnight for consistency
-                due_datetime = datetime.datetime.combine(due_date, datetime.time(0, 0))
+                due_datetime = datetime.datetime.combine(due_date, datetime.time(23, 59, 59)) # End of day if no time provided
         except ValueError as e:
             return jsonify({"error": f"Invalid date/time format: {e}"}), 400
 
@@ -468,10 +477,144 @@ def delete_note(note_id):
     db.session.commit()
     return jsonify({"message": "Note deleted successfully"}), 200
 
+# Download notes functionality
+@app.route('/download-notes', methods=['GET'])
+@login_required
+def download_notes():
+    from fpdf import FPDF
+    from fpdf.enums import XPos, YPos
+    import datetime
+    import tempfile
+    import os
+
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)
+    notes = Note.query.filter_by(user_id=user_id).order_by(Note.note_date.desc()).all()
+
+    # --- PDF Setup ---
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    # Colors
+    primary_blue = (26, 115, 232)
+    text_gray = (40, 40, 40)
+    light_gray = (120, 120, 120)
+    soft_bg = (245, 247, 250)
+
+    # --- Header ---
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_text_color(*primary_blue)
+    pdf.cell(0, 15, f"{user.username}'s Notes", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    pdf.set_font("Helvetica", "I", 11)
+    pdf.set_text_color(*light_gray)
+    current_time = datetime.datetime.now().strftime("Generated on %B %d, %Y at %I:%M %p")
+    pdf.cell(0, 8, current_time, align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    # Decorative divider
+    pdf.set_draw_color(*primary_blue)
+    pdf.set_line_width(1)
+    pdf.line(25, pdf.get_y() + 5, 185, pdf.get_y() + 5)
+    pdf.ln(15)
+
+    # --- Notes Section ---
+    if not notes:
+        pdf.set_font("Helvetica", "", 12)
+        pdf.set_text_color(*light_gray)
+        pdf.cell(0, 10, "You have no saved notes yet.", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    else:
+        # Total count
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.set_text_color(*text_gray)
+        pdf.cell(0, 10, f"Total Notes: {len(notes)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(8)
+
+        # Loop through notes
+        for i, note in enumerate(notes, 1):
+            if pdf.get_y() > 250:
+                pdf.add_page()
+
+            # Background box for each note header
+            pdf.set_fill_color(*soft_bg)
+            pdf.set_draw_color(*primary_blue)
+            y_start = pdf.get_y()
+            pdf.rect(20, y_start, 170, 12, style="F")
+
+            # Note title
+            pdf.set_font("Helvetica", "BI", 13)
+            pdf.set_text_color(*text_gray)
+            clean_title = note.topic.encode('ascii', 'replace').decode('ascii').replace('?', '')
+            pdf.set_xy(25, y_start + 2)
+            pdf.cell(0, 8, f"{i}. {clean_title}")
+
+            # Note date (right-aligned, italic)
+            pdf.set_font("Helvetica", "I", 10)
+            pdf.set_text_color(*light_gray)
+            note_date = note.note_date.strftime("%b %d, %Y")
+            pdf.set_xy(150, y_start + 2)
+            pdf.cell(40, 8, note_date, align="R")
+
+            # Move to content
+            pdf.ln(12)
+
+            # Note content box
+            pdf.set_font("Helvetica", "", 11)
+            pdf.set_text_color(*text_gray)
+            clean_content = note.content.encode('ascii', 'replace').decode('ascii').replace('?', '')
+
+            # Multi-line content
+            pdf.set_fill_color(255, 255, 255)
+            pdf.set_draw_color(230, 230, 230)
+            pdf.set_line_width(0.3)
+            pdf.set_x(25)
+            pdf.multi_cell(160, 7, clean_content, border=1, fill=True)
+            pdf.ln(10)
+
+    # --- Footer ---
+    pdf.set_y(-30)
+    pdf.set_font("Helvetica", "I", 9)
+    pdf.set_text_color(*light_gray)
+    pdf.cell(0, 10, "___________________________", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    footer_text = f"Total {len(notes)} note" + ("s" if len(notes) != 1 else "")
+    pdf.cell(0, 5, f"{footer_text} - Generated by My Diary", align="C")
+
+    # --- Save Temp File ---
+    temp_dir = tempfile.gettempdir()
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"{user.username}.pdf"
+    filepath = os.path.join(temp_dir, filename)
+
+    try:
+        pdf.output(filepath)
+        if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+            raise Exception("PDF file failed to generate")
+
+        response = send_file(
+            filepath,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+
+        @response.call_on_close
+        def cleanup():
+            if os.path.exists(filepath):
+                os.remove(filepath)
+
+        return response
+
+    except Exception as e:
+        print(f"Error creating PDF: {e}")
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        raise
+
 
 if __name__ == '__main__':
     import os
     with app.app_context():
          db.create_all()
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5134))
     app.run(host='0.0.0.0', port=port, debug=False)

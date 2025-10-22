@@ -1,4 +1,4 @@
-#!/home/bumble/Desktop/Projects/DoDeck/venv/bin/python3
+#!/mnt/c/Users/bumbl/Desktop/Projects/DoDeck/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

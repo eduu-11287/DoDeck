@@ -776,6 +776,50 @@ body {
     pointer-events: none;
 }
 
+/* Hide scrollbars for right panel */
+.right-panel {
+    flex: 1;
+    background-color: #1e1e1e;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.right-panel::-webkit-scrollbar {
+    display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+}
+
+.middle-panel {
+    flex: 2;
+    background-color: #242424;
+    border-right: 1px solid rgba(0, 255, 0, 0.1);
+    border-left: 1px solid rgba(0, 255, 0, 0.1);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.middle-panel::-webkit-scrollbar {
+    display: none; /* WebKit browsers */
+}
+
+.task-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-bottom: 20px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.task-list::-webkit-scrollbar {
+    display: none; /* WebKit browsers */
+}
+
 @keyframes task-complete {
     0% {
         opacity: 1;

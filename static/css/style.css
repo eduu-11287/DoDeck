@@ -186,7 +186,7 @@ body {
 .task-list {
     flex-grow: 1; /* Allows it to take up available space */
     overflow-y: auto; /* Scroll if tasks overflow */
-    padding-right: 10px; /* Space for scrollbar */
+    padding-right: 1px; /* Space for scrollbar */
     margin-bottom: 20px; /* Space before action buttons */
 }
 

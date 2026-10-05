@@ -20,12 +20,19 @@ def init_db():
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "A JSON object is required"}), 400
     username = data.get('username')
     password = data.get('password')
 
-    if not username or not password:
+    if not isinstance(username, str) or not isinstance(password, str):
         return jsonify({"error": "Username and password are required"}), 400
+    username = username.strip()
+    if len(username) < 3 or len(username) > 80:
+        return jsonify({"error": "Username must be between 3 and 80 characters"}), 400
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
 
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 409
@@ -45,11 +52,16 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "A JSON object is required"}), 400
     username = data.get('username')
     password = data.get('password')
 
-    user = User.query.filter_by(username=username).first()
+    if not isinstance(username, str) or not isinstance(password, str):
+        return jsonify({"error": "Username and password are required"}), 400
+
+    user = User.query.filter_by(username=username.strip()).first()
 
     if user and user.check_password(password):
         session['user_id'] = user.id
@@ -71,7 +83,7 @@ def logout():
 @auth_bp.route('/check_auth', methods=['GET'])
 def check_auth():
     if 'user_id' in session:
-        user = User.query.get(session['user_id'])
+        user = db.session.get(User, session['user_id'])
         if user:
             return jsonify({
                 "authenticated": True,

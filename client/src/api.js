@@ -12,8 +12,15 @@ async function request(path, options = {}) {
     },
   });
   if (!res.ok) {
+    let message = res.statusText;
     const text = await res.text();
-    throw new Error(text || res.statusText);
+    try {
+      const payload = JSON.parse(text);
+      message = payload.error || payload.message || message;
+    } catch {
+      if (text) message = text;
+    }
+    throw new Error(message);
   }
   return res;
 }

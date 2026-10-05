@@ -1,406 +1,257 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit3, Check, X, Circle, CheckCircle2, Clock, Calendar, Tag, Flame } from 'lucide-react';
-import { fetchTasks, createTask, updateTask, deleteTask, fetchStreak } from '../api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { CalendarDays, Check, ChevronDown, Circle, Clock3, Flame, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { createTask, deleteTask, fetchStreak, fetchTasks, updateTask } from '../api';
+import HighlightedText from './HighlightedText';
 
-const MOODS = ['great', 'good', 'neutral', 'bad', 'terrible'];
-const MOOD_EMOJIS = { great: '😊', good: '🙂', neutral: '😐', bad: '😟', terrible: '😢' };
+const priorityLabels = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low' };
 
-const getTimeGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-};
+function dateLabel(task) {
+  if (!task.dueDate) return '';
+  const date = new Date(task.dueDate);
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  const prefix = date.toDateString() === today.toDateString()
+    ? 'Today'
+    : date.toDateString() === tomorrow.toDateString()
+      ? 'Tomorrow'
+      : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (!task.dueTime) return prefix;
+  const [hours, minutes] = task.dueTime.split(':');
+  return `${prefix} · ${new Date(2000, 0, 1, Number(hours), Number(minutes)).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+}
 
-const formatDueDate = (dueDate, dueTime) => {
-  if (!dueDate) return null;
-  const date = new Date(dueDate);
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  const isTomorrow = date.toDateString() === new Date(now.getTime() + 86400000).toDateString();
-  let dateStr = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  if (dueTime) {
-    const [h, m] = dueTime.split(':');
-    const ampm = parseInt(h) >= 12 ? 'PM' : 'AM';
-    dateStr += ` · ${parseInt(h) % 12 || 12}:${m} ${ampm}`;
-  }
-  return dateStr;
-};
+function isOverdue(task) {
+  return task.isActive && task.dueDate && new Date(task.dueDate) < new Date();
+}
 
-const isOverdue = (dueDate, isActive) => {
-  if (!dueDate || !isActive) return false;
-  return new Date(dueDate) < new Date();
-};
-
-export default function TaskPanel({
-  username,
-  tasks,
-  streak,
-  onTasksChange,
-  onStreakChange,
-  onLogout,
-}) {
+export default function TaskPanel({ username, tasks, streak, searchQuery, quickAddSignal, onTasksChange, onStreakChange, onNotify }) {
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [mood, setMood] = useState('good');
+  const [editingTask, setEditingTask] = useState(null);
+  const [form, setForm] = useState({ name: '', category: '', dueDate: '', dueTime: '', priority: 3 });
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const lastQuickAdd = useRef(quickAddSignal);
 
-  useEffect(() => { refreshStreak(); }, [tasks]);
+  useEffect(() => {
+    if (quickAddSignal !== lastQuickAdd.current) {
+      lastQuickAdd.current = quickAddSignal;
+      setEditingTask(null);
+      setForm({ name: '', category: '', dueDate: '', dueTime: '', priority: 3 });
+      setShowModal(true);
+    }
+  }, [quickAddSignal]);
 
+  const refreshTasks = async () => onTasksChange(await fetchTasks());
   const refreshStreak = async () => {
-    try {
-      const s = await fetchStreak();
-      onStreakChange({ current: s.current_streak, broken: s.streak_broken });
-    } catch (e) { console.error(e); }
+    const latest = await fetchStreak();
+    onStreakChange({ current: latest.current_streak, broken: latest.streak_broken });
   };
 
-  const handleAddTask = async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const name = form.elements.namedItem('task-name').value;
-    const category = form.elements.namedItem('task-category').value;
-    const dueDate = form.elements.namedItem('task-due-date').value;
-    const dueTime = form.elements.namedItem('task-due-time').value;
-    if (!name) return;
-    await createTask({ name, category: category || 'Uncategorized', dueDate: dueDate || null, dueTime: dueTime || null });
-    onTasksChange(await fetchTasks());
-    setShowModal(false);
-    form.reset();
+  const categories = useMemo(() => [...new Set(tasks.map((task) => task.category).filter(Boolean))].sort(), [tasks]);
+  const filteredTasks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return tasks.filter((task) => {
+      if (query && !`${task.name} ${task.category || ''}`.toLowerCase().includes(query)) return false;
+      if (categoryFilter !== 'all' && task.category !== categoryFilter) return false;
+      if (priorityFilter !== 'all' && task.priority !== Number(priorityFilter)) return false;
+      if (statusFilter === 'active' && !query && !task.isActive) return false;
+      if (statusFilter === 'completed' && task.isActive) return false;
+      if (statusFilter === 'overdue' && !isOverdue(task)) return false;
+      return true;
+    }).sort((a, b) => {
+      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+      if ((a.priority || 3) !== (b.priority || 3)) return (a.priority || 3) - (b.priority || 3);
+      return (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
+    });
+  }, [tasks, searchQuery, statusFilter, categoryFilter, priorityFilter]);
+
+  const activeTasks = tasks.filter((task) => task.isActive);
+  const completedTasks = tasks.filter((task) => !task.isActive);
+  const doneToday = completedTasks.filter((task) => task.completedAt && new Date(task.completedAt).toDateString() === new Date().toDateString()).length;
+  const progress = activeTasks.length + doneToday > 0 ? Math.round(doneToday / (activeTasks.length + doneToday) * 100) : 0;
+
+  const showNewTask = () => {
+    setEditingTask(null);
+    setForm({ name: '', category: '', dueDate: '', dueTime: '', priority: 3 });
+    setShowModal(true);
   };
 
-  const handleToggleTask = async (task) => {
-    await updateTask(task.id, { isActive: !task.isActive });
-    onTasksChange(await fetchTasks());
-  };
-
-  const handleDeleteTask = async (id) => {
-    if (!confirm('Delete this task?')) return;
-    await deleteTask(id);
-    onTasksChange(await fetchTasks());
-  };
-
-  const startEditing = (task) => {
-    setEditingId(task.id);
-    setEditForm({
+  const beginEdit = (task) => {
+    setEditingTask(task);
+    setForm({
       name: task.name,
       category: task.category || '',
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
       dueTime: task.dueTime || '',
+      priority: task.priority || 3,
     });
+    setShowModal(true);
   };
 
-  const saveEdit = async (task) => {
-    await updateTask(task.id, { name: editForm.name, category: editForm.category, dueDate: editForm.dueDate || null, dueTime: editForm.dueTime || null });
-    setEditingId(null);
-    onTasksChange(await fetchTasks());
+  const saveTask = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const payload = {
+        ...form,
+        name: form.name.trim(),
+        category: form.category.trim() || 'Personal',
+        dueDate: form.dueDate || null,
+        dueTime: form.dueTime || null,
+        priority: Number(form.priority),
+      };
+      if (editingTask) await updateTask(editingTask.id, payload);
+      else await createTask(payload);
+      await refreshTasks();
+      setShowModal(false);
+    } catch (error) {
+      onNotify(`Couldn't save this task: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const activeTasks = tasks.filter((t) => t.isActive);
-  const completedTasks = tasks.filter((t) => !t.isActive);
+  const toggleTask = async (task) => {
+    try {
+      await updateTask(task.id, { isActive: !task.isActive });
+      await Promise.all([refreshTasks(), refreshStreak()]);
+    } catch (error) {
+      onNotify(`Couldn't update this task: ${error.message}`);
+    }
+  };
+
+  const removeTask = async (task) => {
+    if (!window.confirm(`Delete “${task.name}”?`)) return;
+    try {
+      await deleteTask(task.id);
+      await refreshTasks();
+    } catch (error) {
+      onNotify(`Couldn't delete this task: ${error.message}`);
+    }
+  };
+
+  const selectedTodayTask = activeTasks.find((task) => task.priority === 1) || activeTasks[0];
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-        className="mb-8"
-      >
-        <div className="text-xs font-bold uppercase tracking-[2px] text-indigo-600 dark:text-indigo-400 mb-1">{getTimeGreeting()}</div>
-        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">{username}</h2>
-        <p className="text-slate-600 dark:text-slate-400 mt-2">Let's make today count. {activeTasks.length} task{activeTasks.length !== 1 ? 's' : ''} waiting.</p>
-      </motion.div>
-
-      <motion.div
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
-        {[
-          { icon: Flame, label: 'Day Streak', value: streak.current, color: streak.broken ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400', bg: streak.broken ? 'bg-rose-500/10' : 'bg-emerald-500/10' },
-          { icon: Clock, label: 'Tasks Left', value: activeTasks.length, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/10' },
-          { icon: CheckCircle2, label: 'Completed', value: completedTasks.length, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/50 rounded-2xl p-5 shadow-xl relative overflow-hidden group"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay: 0.15 + i * 0.08, duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-            whileHover={{ y: -4, transition: { duration: 0.3 } }}
-          >
-            <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center mb-3 ${stat.color}`}>
-              <stat.icon size={20} />
-            </div>
-            <div className={`text-3xl font-extrabold ${stat.color} tracking-tight`}>{stat.value}</div>
-            <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">{stat.label}</div>
-            <div className={`absolute -top-4 -right-4 w-20 h-20 rounded-full blur-2xl mix-blend-overlay ${stat.bg} opacity-60`} />
-          </motion.div>
-        ))}
-      </motion.div>
-
-      <motion.div
-        className="mb-8"
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">How are you feeling today?</div>
-        <div className="flex gap-2">
-          {MOODS.map((m) => (
-            <motion.button
-              key={m}
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setMood(m)}
-              className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl transition-all duration-300 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700 ${
-                mood === m
-                  ? 'bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border-indigo-400/50 shadow-md scale-110'
-                  : 'hover:border-indigo-400/30'
-              }`}
-            >
-              {MOOD_EMOJIS[m]}
-            </motion.button>
-          ))}
+    <section className="task-view">
+      <div className="focus-card">
+        <div className="focus-copy">
+          <span className="focus-kicker"><span className="focus-dot" /> TODAY’S FOCUS</span>
+          <h2>{selectedTodayTask ? selectedTodayTask.name : 'You made it through your list.'}</h2>
+          <p>{selectedTodayTask ? `Start here, ${username}. One focused step is a good day.` : 'Take a breath. You can add something new whenever you’re ready.'}</p>
+          <button className="focus-add" onClick={showNewTask}><Plus size={16} /> Add a task</button>
         </div>
-      </motion.div>
+        <div className="focus-progress" aria-label={`${progress}% of today's tasks complete`}>
+          <svg viewBox="0 0 112 112" role="img" aria-hidden="true">
+            <circle className="progress-track" cx="56" cy="56" r="48" />
+            <circle className="progress-value" cx="56" cy="56" r="48" style={{ strokeDashoffset: `${301.6 - (301.6 * progress / 100)}` }} />
+          </svg>
+          <div><strong>{progress}%</strong><span>today</span></div>
+        </div>
+      </div>
 
-      {tasks.length === 0 ? (
-        <motion.div
-          className="flex flex-col items-center justify-center py-20 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <motion.div
-            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 flex items-center justify-center mb-4"
-            animate={{ y: [0, -10, 0] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <Plus size={32} className="text-indigo-600 dark:text-indigo-400" />
-          </motion.div>
-          <p className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">No tasks yet</p>
-          <p className="text-sm text-slate-600 dark:text-slate-400">Click the + button below to create your first task.</p>
-        </motion.div>
-      ) : (
-        <div className="space-y-3 mb-24">
-          <AnimatePresence>
-            {activeTasks.map((task, index) => (
-              <motion.div
-                key={task.id}
-                className={`bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/50 rounded-2xl p-5 shadow-xl relative overflow-hidden group ${
-                  isOverdue(task.dueDate, task.isActive) ? 'border-rose-500/30' : ''
-                }`}
-                initial={{ opacity: 0, y: 20, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 40, scale: 0.96 }}
-                transition={{ delay: index * 0.04, duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-                whileHover={{ y: -2, transition: { duration: 0.3 } }}
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-l-2xl" />
+      <div className="daily-metrics">
+        <div><span className="metric-symbol metric-flame"><Flame size={16} /></span><strong>{streak.current}</strong><span>day streak</span></div>
+        <div><span className="metric-symbol metric-clock"><Clock3 size={16} /></span><strong>{activeTasks.length}</strong><span>to do</span></div>
+        <div><span className="metric-symbol metric-check"><Check size={16} /></span><strong>{doneToday}</strong><span>done today</span></div>
+      </div>
 
-                {editingId === task.id ? (
-                  <div className="pl-5 space-y-3">
-                    <input
-                      className="w-full px-3 py-2 rounded-lg bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      placeholder="Task name"
-                    />
-                    <input
-                      className="w-full px-3 py-2 rounded-lg bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all"
-                      value={editForm.category}
-                      onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                      placeholder="Category"
-                    />
-                    <div className="flex gap-2">
-                      <button onClick={() => saveEdit(task)} className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-xs font-semibold hover:shadow-lg transition-all">
-                        <Check size={14} className="inline mr-1" /> Save
-                      </button>
-                      <button onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg bg-slate-100/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-medium hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-all">
-                        <X size={14} className="inline mr-1" /> Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-start gap-3 pl-3">
-                      <label className="relative mt-0.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!task.isActive}
-                          onChange={() => handleToggleTask(task)}
-                          className="sr-only"
-                        />
-                        <div className={`w-5 h-5 rounded-md border-2 transition-all duration-300 flex items-center justify-center ${
-                            task.isActive
-                              ? 'border-indigo-400 bg-transparent hover:border-indigo-500'
-                              : 'border-transparent bg-gradient-to-br from-indigo-500 to-violet-600 shadow-md shadow-indigo-500/20'
-                          }`}>
-                          {!task.isActive && <CheckCircle2 size={12} className="text-white" />}
-                        </div>
-                      </label>
+      <div className="section-heading">
+        <div><h2>Your tasks</h2><p>Prioritize what matters, then take it one at a time.</p></div>
+        <button className="primary-button add-task-button" onClick={showNewTask}><Plus size={17} /> New task</button>
+      </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-semibold text-sm transition-all duration-300 ${
-                          !task.isActive ? 'line-through text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-slate-100'
-                        }`}>
-                          {task.name}
-                        </p>
+      <div className="task-filters" aria-label="Task filters">
+        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
+          <option value="active">Open tasks</option>
+          <option value="all">All tasks</option>
+          <option value="overdue">Overdue</option>
+          <option value="completed">Completed</option>
+        </select>
+        <select className="filter-select" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
+          <option value="all">All categories</option>
+          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+        </select>
+        <select className="filter-select" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} aria-label="Filter by priority">
+          <option value="all">All priorities</option>
+          {[1, 2, 3, 4].map((priority) => <option key={priority} value={priority}>{priorityLabels[priority]}</option>)}
+        </select>
+      </div>
 
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {task.category && (
-                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 border border-indigo-400/30">
-                              {task.category}
-                            </span>
-                          )}
-                          {task.dueDate && (
-                            <span className={`text-[11px] font-medium flex items-center gap-1 ${
-                              isOverdue(task.dueDate, task.isActive) ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'
-                            }`}>
-                              <Calendar size={11} />
-                              {formatDueDate(task.dueDate, task.dueTime)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-1.5 mt-3 pl-8 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <button
-                        onClick={() => startEditing(task)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
-                      >
-                        <Edit3 size={13} className="inline mr-1" /> Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-                      >
-                        <Trash2 size={13} className="inline mr-1" /> Delete
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400/10 to-violet-400/10 blur-xl mix-blend-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {completedTasks.length > 0 && (
-            <>
-              <div className="pt-6 pb-2">
-                <span className="text-[10px] font-bold uppercase tracking-[2px] text-slate-500 dark:text-slate-400">
-                  Completed ({completedTasks.length})
-                </span>
+      <div className="task-list">
+        {filteredTasks.length ? filteredTasks.map((task) => (
+          <motion.article className={`task-card${isOverdue(task) ? ' task-overdue' : ''}${!task.isActive ? ' task-complete' : ''}`} key={task.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 8 }}>
+            <button className={`task-check${!task.isActive ? ' checked' : ''}`} onClick={() => toggleTask(task)} aria-label={task.isActive ? `Complete ${task.name}` : `Reopen ${task.name}`}>
+              {!task.isActive && <Check size={14} />}
+            </button>
+            <div className="task-main">
+              <h3><HighlightedText query={searchQuery}>{task.name}</HighlightedText></h3>
+              <div className="task-meta">
+                {task.category && <span className="category-chip"><HighlightedText query={searchQuery}>{task.category}</HighlightedText></span>}
+                {task.dueDate && <span className={`due-label${isOverdue(task) ? ' overdue-label' : ''}`}><CalendarDays size={13} />{dateLabel(task)}</span>}
+                <span className={`priority-chip priority-${task.priority || 3}`}>{priorityLabels[task.priority || 3]}</span>
               </div>
-              <AnimatePresence>
-                {completedTasks.map((task, index) => (
-                  <motion.div
-                    key={task.id}
-                    className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/50 rounded-2xl p-4 shadow-xl relative overflow-hidden opacity-70 hover:opacity-100 transition-all duration-300"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: 40 }}
-                    transition={{ delay: index * 0.03 }}
-                  >
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500 to-teal-400 rounded-l-2xl" />
-                    <div className="flex items-start gap-3 pl-3">
-                      <label className="relative mt-0.5 cursor-pointer">
-                        <input type="checkbox" checked={!task.isActive} onChange={() => handleToggleTask(task)} className="sr-only" />
-                        <div className="w-5 h-5 rounded-md border-2 border-transparent bg-gradient-to-br from-emerald-500 to-teal-400 shadow-md shadow-emerald-500/20 flex items-center justify-center">
-                          <CheckCircle2 size={12} className="text-white" />
-                        </div>
-                      </label>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-slate-500 dark:text-slate-400 line-through">{task.name}</p>
-                        {task.category && (
-                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 mt-1.5 inline-block">
-                            {task.category}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
+            </div>
+            <div className="task-actions">
+              <button className="icon-button small" onClick={() => beginEdit(task)} aria-label={`Edit ${task.name}`}><Pencil size={15} /></button>
+              <button className="icon-button small delete-action" onClick={() => removeTask(task)} aria-label={`Delete ${task.name}`}><Trash2 size={15} /></button>
+            </div>
+          </motion.article>
+        )) : (
+          <div className="empty-state">
+            <span className="empty-icon"><Circle size={23} /></span>
+            <h3>{searchQuery ? 'Nothing matches that search.' : statusFilter === 'active' ? 'A clear slate.' : 'No tasks found.'}</h3>
+            <p>{searchQuery ? 'Try a different word or category.' : 'Add a task and give your day a starting point.'}</p>
+            {!searchQuery && <button className="text-button" onClick={showNewTask}>Create your first task <Plus size={15} /></button>}
+          </div>
+        )}
+      </div>
+
+      {completedTasks.length > 0 && statusFilter !== 'completed' && (
+        <div className="completed-section">
+          <button className="completed-toggle" onClick={() => setShowCompleted(!showCompleted)} aria-expanded={showCompleted}>
+            <span><Check size={15} /> Completed <span className="completed-count">{completedTasks.length}</span></span>
+            <ChevronDown className={showCompleted ? 'rotate-chevron' : ''} size={17} />
+          </button>
+          <AnimatePresence>
+            {showCompleted && (
+              <motion.div className="task-list completed-list" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                {completedTasks.map((task) => (
+                  <article className="task-card task-complete" key={task.id}>
+                    <button className="task-check checked" onClick={() => toggleTask(task)} aria-label={`Reopen ${task.name}`}><Check size={14} /></button>
+                    <div className="task-main"><h3>{task.name}</h3>{task.category && <div className="task-meta"><span className="category-chip">{task.category}</span></div>}</div>
+                    <button className="icon-button small delete-action" onClick={() => removeTask(task)} aria-label={`Delete ${task.name}`}><Trash2 size={15} /></button>
+                  </article>
                 ))}
-              </AnimatePresence>
-            </>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
-      <motion.button
-        onClick={() => setShowModal(true)}
-        whileHover={{ scale: 1.08, rotate: 90 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/40 flex items-center justify-center z-40"
-      >
-        <Plus size={26} />
-      </motion.button>
-
       <AnimatePresence>
         {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={() => setShowModal(false)}
-          >
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.form
-              onSubmit={handleAddTask}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/50 rounded-3xl p-6 shadow-xl"
-              initial={{ opacity: 0, y: 20, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.96 }}
-              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-            >
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">New Task</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mb-5">Add a task</p>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-[1.5px] text-slate-500 dark:text-slate-400 mb-1.5">Task Name</label>
-                  <input name="task-name" placeholder="What needs to be done?" required autoFocus className="w-full px-4 py-2.5 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-[1.5px] text-slate-500 dark:text-slate-400 mb-1.5">Category</label>
-                  <select name="task-category" className="w-full px-4 py-2.5 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all">
-                    <option value="">None</option>
-                    <option value="Work">Work</option>
-                    <option value="Personal">Personal</option>
-                    <option value="Health">Health</option>
-                    <option value="Learning">Learning</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-[1.5px] text-slate-500 dark:text-slate-400 mb-1.5">Due Date</label>
-                    <input name="task-due-date" type="date" className="w-full px-4 py-2.5 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-[1.5px] text-slate-500 dark:text-slate-400 mb-1.5">Due Time</label>
-                    <input name="task-due-time" type="time" className="w-full px-4 py-2.5 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
-                  </div>
-                </div>
+          <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowModal(false); }}>
+            <motion.form className="edit-dialog" onSubmit={saveTask} initial={{ opacity: 0, y: 10, scale: 0.99 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}>
+              <div className="dialog-heading"><div><span className="eyebrow">MAKE IT HAPPEN</span><h2>{editingTask ? 'Edit task' : 'New task'}</h2></div><button className="icon-button" type="button" onClick={() => setShowModal(false)} aria-label="Close"><X size={18} /></button></div>
+              <label className="form-label" htmlFor="task-name">What needs doing?</label>
+              <input id="task-name" className="form-input" autoFocus maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required placeholder="e.g. Send the project update" />
+              <div className="form-grid">
+                <div><label className="form-label" htmlFor="task-category">Category</label><input id="task-category" className="form-input" maxLength={80} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Personal" /></div>
+                <div><label className="form-label" htmlFor="task-priority">Priority</label><select id="task-priority" className="form-input" value={form.priority} onChange={(event) => setForm({ ...form, priority: Number(event.target.value) })}>{[1, 2, 3, 4].map((priority) => <option key={priority} value={priority}>{priorityLabels[priority]}</option>)}</select></div>
+                <div><label className="form-label" htmlFor="task-due-date">Due date</label><input id="task-due-date" className="form-input" type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} /></div>
+                <div><label className="form-label" htmlFor="task-due-time">Time</label><input id="task-due-time" className="form-input" type="time" value={form.dueTime} onChange={(event) => setForm({ ...form, dueTime: event.target.value })} /></div>
               </div>
-
-              <div className="flex gap-2.5 mt-6 justify-end">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-xs font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
-                  Create Task
-                </button>
-              </div>
+              <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setShowModal(false)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Saving…' : editingTask ? 'Save changes' : 'Add task'}</button></div>
             </motion.form>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </section>
   );
 }

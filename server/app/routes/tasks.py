@@ -1,21 +1,10 @@
 from flask import Blueprint, request, jsonify, session
 from app.models import Task
 from app import db
+from app.utils.decorators import login_required
 import datetime
 
 tasks_bp = Blueprint('tasks', __name__)
-
-
-def login_required(f):
-    from functools import wraps
-
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({"error": "Authentication required"}), 401
-        return f(*args, **kwargs)
-    return decorated_function
-
 
 @tasks_bp.route('/tasks', methods=['GET'])
 @login_required
@@ -30,14 +19,31 @@ def get_tasks():
 @login_required
 def add_task():
     user_id = session['user_id']
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "A JSON object is required"}), 400
     name = data.get('name')
     category = data.get('category', 'Uncategorized')
+    priority = data.get('priority', 3)
     due_date_str = data.get('dueDate')
     due_time_str = data.get('dueTime')
 
-    if not name:
+    if not isinstance(name, str) or not name.strip():
         return jsonify({"error": "Task name is required"}), 400
+    if (
+        not isinstance(priority, int)
+        or isinstance(priority, bool)
+        or priority not in range(1, 5)
+    ):
+        return jsonify({"error": "Priority must be an integer from 1 to 4"}), 400
+    if not isinstance(category, str) or len(category) > 80:
+        return jsonify({"error": "Category must be 80 characters or fewer"}), 400
+    if len(name.strip()) > 120:
+        return jsonify({"error": "Task name must be 120 characters or fewer"}), 400
+    if due_date_str is not None and not isinstance(due_date_str, str):
+        return jsonify({"error": "Due date must be a string in YYYY-MM-DD format"}), 400
+    if due_time_str is not None and not isinstance(due_time_str, str):
+        return jsonify({"error": "Due time must be a string in HH:MM format"}), 400
 
     due_datetime = None
     if due_date_str:
@@ -58,8 +64,9 @@ def add_task():
             return jsonify({"error": f"Invalid date/time format: {e}"}), 400
 
     new_task = Task(
-        name=name,
+        name=name.strip(),
         category=category,
+        priority=priority,
         is_active=True,
         due_date=due_datetime,
         user_id=user_id
@@ -78,12 +85,29 @@ def update_task(task_id):
     if task is None or task.user_id != user_id:
         return jsonify({"error": "Task not found or not authorized"}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "A JSON object is required"}), 400
 
     if 'name' in data:
-        task.name = data['name']
+        if not isinstance(data['name'], str) or not data['name'].strip():
+            return jsonify({"error": "Task name is required"}), 400
+        if len(data['name'].strip()) > 120:
+            return jsonify({"error": "Task name must be 120 characters or fewer"}), 400
+        task.name = data['name'].strip()
     if 'category' in data:
+        if not isinstance(data['category'], str) or len(data['category']) > 80:
+            return jsonify({"error": "Category must be 80 characters or fewer"}), 400
         task.category = data['category']
+    if 'priority' in data:
+        priority = data['priority']
+        if (
+            not isinstance(priority, int)
+            or isinstance(priority, bool)
+            or priority not in range(1, 5)
+        ):
+            return jsonify({"error": "Priority must be an integer from 1 to 4"}), 400
+        task.priority = priority
     if 'isActive' in data:
         if data['isActive'] is False and task.is_active is True:
             task.completed_at = datetime.datetime.now()
@@ -102,6 +126,11 @@ def update_task(task_id):
         new_due_date_str = data.get('dueDate', date_str)
         new_due_time_str = data.get('dueTime', time_str)
 
+        if new_due_date_str is not None and not isinstance(new_due_date_str, str):
+            return jsonify({"error": "Due date must be a string in YYYY-MM-DD format"}), 400
+        if new_due_time_str is not None and not isinstance(new_due_time_str, str):
+            return jsonify({"error": "Due time must be a string in HH:MM format"}), 400
+
         if new_due_date_str:
             try:
                 parsed_date = datetime.datetime.strptime(
@@ -116,7 +145,7 @@ def update_task(task_id):
                     )
                 else:
                     task.due_date = datetime.datetime.combine(
-                        parsed_date, datetime.time(0, 0)
+                        parsed_date, datetime.time(23, 59, 59)
                     )
             except ValueError as e:
                 return jsonify(

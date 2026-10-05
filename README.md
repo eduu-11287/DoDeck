@@ -1,11 +1,11 @@
-# DoDeck - Professional Todo & Notes App
+# Daymark — Make room for what matters
 
-A modern productivity application built with a React + Vite frontend and a Flask backend, containerized with Docker and PostgreSQL.
+A calm, focused productivity application for tasks and notes, built with a React + Vite frontend and a Flask backend, containerized with Docker and PostgreSQL.
 
 ## Project Structure
 
 ```
-dodeck/
+daymark/
 ├── client/              # React + Vite frontend
 │   ├── src/
 │   │   ├── api.js       # API client
@@ -43,8 +43,17 @@ cp client/.env.example client/.env
 # Start all services
 docker-compose up --build
 
-# Run database migrations
-docker-compose exec server flask db upgrade
+# Apply database migrations
+docker-compose exec server flask --app run.py db upgrade
+```
+
+For a database that predates Alembic and was created by the old `run.py`
+auto-create flow, take a backup first, then mark the existing schema as the
+legacy baseline before applying the new additive migrations:
+
+```bash
+docker-compose exec server flask --app run.py db stamp 1551bbe550f9
+docker-compose exec server flask --app run.py db upgrade
 ```
 
 The app will be available at:
@@ -60,17 +69,13 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
-# Initialize database (first time only)
-python run.py  # Creates tables and starts server on :5134
+# Apply the committed schema and start the server
+flask --app run.py db upgrade
+python run.py
 ```
 
-In a second terminal, generate initial migration:
-```bash
-cd server
-flask db init
-flask db migrate -m "Initial migration"
-flask db upgrade
-```
+For a pre-existing, unversioned local database, back it up and use
+`flask --app run.py db stamp 1551bbe550f9` before `flask --app run.py db upgrade`.
 
 #### Frontend
 ```bash
@@ -82,16 +87,16 @@ npm run dev
 
 ## Features
 
-- **Task Management**: Create, edit, delete, and complete tasks with due dates
-- **Notes**: Add, edit, and organize notes by date
+- **Task Management**: Create, edit, delete, and complete prioritized tasks with due dates
+- **Notes**: Add, edit, search, tag, and organize notes by date
 - **Streak Tracking**: Monitor daily productivity streaks
-- **Calendar & Clock**: Built-in calendar view and digital clock
+- **Calendar**: Monthly task calendar with selected-day details
 - **PDF Export**: Download all notes as a formatted PDF
 - **Responsive Design**: Works on desktop and mobile
 
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite 5
+- **Frontend**: React 18 + Vite 8
 - **Backend**: Flask 2.3 + SQLAlchemy + Flask-Migrate
 - **Database**: PostgreSQL 15 (Docker) / SQLite (local dev)
 - **Authentication**: Flask session-based
@@ -119,8 +124,7 @@ npm run dev
 ### Backend
 ```bash
 cd server
-flask db migrate -m "description"
-flask db upgrade
+flask --app run.py db upgrade
 ```
 
 ### Frontend

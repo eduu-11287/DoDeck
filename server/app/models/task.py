@@ -7,6 +7,7 @@ class Task(db.Model):
     name = db.Column(db.String(120), nullable=False)
     category = db.Column(db.String(80), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    priority = db.Column(db.Integer, nullable=False, default=3)
     due_date = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -54,6 +55,7 @@ class Task(db.Model):
             'name': self.name,
             'category': self.category,
             'isActive': self.is_active,
+            'priority': self.priority,
             'timeLeft': self.time_left,
             'dueDate': (
                 self.due_date.isoformat() if self.due_date else None

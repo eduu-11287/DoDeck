@@ -6,6 +6,7 @@ class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     topic = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=True)
+    tags = db.Column(db.String(500), nullable=True)
     note_date = db.Column(
         db.Date, nullable=False, default=datetime.date.today
     )
@@ -31,6 +32,7 @@ class Note(db.Model):
             'id': self.id,
             'topic': self.topic,
             'content': self.content,
+            'tags': [tag.strip() for tag in self.tags.split(',') if tag.strip()] if self.tags else [],
             'date': self.note_date.isoformat() if self.note_date else None,
             'createdAt': (
                 self.created_at.isoformat() if self.created_at else None

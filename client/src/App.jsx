@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -9,6 +9,8 @@ import CalendarView from './components/CalendarView';
 import StatsView from './components/StatsView';
 import { checkAuth, fetchTasks, fetchNotes, fetchStreak, logout } from './api';
 
+const tabs = ['today', 'calendar', 'notes', 'stats'];
+
 export default function App() {
   const [auth, setAuth] = useState({ authenticated: false, username: '' });
   const [activeTab, setActiveTab] = useState('today');
@@ -17,116 +19,171 @@ export default function App() {
   const [streak, setStreak] = useState({ current: 0, broken: false });
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState('light');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [quickAddSignal, setQuickAddSignal] = useState(0);
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('theme') || 'light';
-    setTheme(saved);
-    document.documentElement.classList.toggle('dark', saved === 'dark');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+    document.documentElement.classList.toggle('dark', savedTheme === 'dark');
   }, []);
 
+  useEffect(() => {
+    checkAuth()
+      .then(setAuth)
+      .catch((error) => setNotice(`Could not verify your session: ${error.message}`))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const loadData = useCallback(async () => {
+    const [loadedTasks, loadedNotes, loadedStreak] = await Promise.all([
+      fetchTasks(),
+      fetchNotes(),
+      fetchStreak(),
+    ]);
+    setTasks(loadedTasks);
+    setNotes(loadedNotes);
+    setStreak({ current: loadedStreak.current_streak, broken: loadedStreak.streak_broken });
+  }, []);
+
+  useEffect(() => {
+    if (!auth.authenticated) return;
+    loadData().catch((error) => setNotice(`Couldn't load your workspace: ${error.message}`));
+  }, [auth.authenticated, loadData]);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timeout = window.setTimeout(() => setNotice(''), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+
   const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('theme', next);
-    document.documentElement.classList.toggle('dark', next === 'dark');
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
   };
 
-  const loadData = async () => {
+  const handleLogout = async () => {
     try {
-      const [t, n, s] = await Promise.all([fetchTasks(), fetchNotes(), fetchStreak()]);
-      setTasks(t);
-      setNotes(n);
-      setStreak({ current: s.current_streak, broken: s.streak_broken });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+      await logout();
+      setAuth({ authenticated: false, username: '' });
+      setTasks([]);
+      setNotes([]);
+      setSearchQuery('');
+    } catch (error) {
+      setNotice(`Couldn't sign out: ${error.message}`);
     }
   };
 
   useEffect(() => {
-    checkAuth().then((a) => { setAuth(a); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (auth.authenticated) loadData();
+    const onKeyDown = (event) => {
+      const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        document.dispatchEvent(new CustomEvent('daymark:search'));
+      } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n' && auth.authenticated) {
+        event.preventDefault();
+        setActiveTab('today');
+        setQuickAddSignal((current) => current + 1);
+      } else if (event.key === '/' && !isTyping && auth.authenticated) {
+        event.preventDefault();
+        document.dispatchEvent(new CustomEvent('daymark:search'));
+      } else if (event.key === 'Escape') {
+        setSearchQuery('');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [auth.authenticated]);
-
-  const handleLogout = async () => {
-    try { await logout(); } catch (e) { console.error(e); }
-    setAuth({ authenticated: false, username: '' });
-  };
 
   if (loading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-glow mx-auto mb-4 flex items-center justify-center"
-          >
-            <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full" />
-          </motion.div>
-          <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 tracking-wide">Loading DoDeck</p>
-        </div>
-      </div>
+      <main className="loading-screen" aria-label="Loading Daymark">
+        <div className="brand-mark">d</div>
+        <p>Getting your day in order…</p>
+      </main>
     );
   }
 
-  if (!auth.authenticated) return <AuthOverlay onAuth={setAuth} />;
+  if (!auth.authenticated) {
+    return (
+      <>
+        <AuthOverlay onAuth={setAuth} />
+        {notice && <div className="toast toast-error" role="alert">{notice}</div>}
+      </>
+    );
+  }
 
-  const activeTaskCount = tasks.filter((t) => t.isActive).length;
+  const activeTaskCount = tasks.filter((task) => task.isActive).length;
+  const pageTitles = {
+    today: ['Your day, made clear.', 'A little progress goes a long way.'],
+    calendar: ['See what’s ahead.', 'Your plans, at a glance.'],
+    notes: ['Keep the good thoughts.', 'Ideas belong somewhere.'],
+    stats: ['Look how far you’ve come.', 'Small steps add up.'],
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 transition-colors duration-500">
-      {/* Noise overlay */}
-      <div
-        className="fixed inset-0 opacity-[0.02] pointer-events-none dark:opacity-[0.04]"
-        style={{
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")',
-          backgroundSize: '200px',
-          mixBlendMode: 'overlay',
+    <div className="app-shell">
+      <Header
+        theme={theme}
+        toggleTheme={toggleTheme}
+        username={auth.username}
+        onLogout={handleLogout}
+        searchQuery={searchQuery}
+        onSearch={setSearchQuery}
+        searchCounts={{
+          tasks: tasks.filter((task) => `${task.name} ${task.category || ''}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
+          notes: notes.filter((note) => `${note.topic} ${note.content || ''}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
         }}
       />
-
-      {/* Floating background orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-indigo-400/10 to-violet-400/8 blur-3xl animate-float dark:from-indigo-500/15 dark:to-violet-500/10" />
-        <div className="absolute top-1/3 -left-40 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-cyan-400/5 to-indigo-400/5 blur-3xl animate-float-delayed dark:from-cyan-500/8 dark:to-indigo-500/6" />
-        <div className="absolute bottom-0 right-1/4 w-[350px] h-[350px] rounded-full bg-gradient-to-tl from-fuchsia-400/5 to-pink-400/3 blur-3xl animate-float dark:from-fuchsia-500/8 dark:to-pink-500/4" style={{ animationDelay: '2s' }} />
-      </div>
-
-      <Header theme={theme} toggleTheme={toggleTheme} username={auth.username} onLogout={handleLogout} />
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} taskCount={activeTaskCount} />
 
-      {/* Main content */}
-      <main className="lg:ml-72 pt-24 pb-16 px-4 lg:px-8">
-        <div className="max-w-3xl mx-auto">
-          <AnimatePresence mode="wait">
-            {activeTab === 'today' && (
-              <motion.div key="today" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}>
-                <TaskPanel username={auth.username} tasks={tasks} streak={streak} onTasksChange={setTasks} onStreakChange={setStreak} onLogout={handleLogout} />
-              </motion.div>
-            )}
-            {activeTab === 'notes' && (
-              <motion.div key="notes" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}>
-                <NotesPanel notes={notes} onNotesChange={setNotes} onLogout={handleLogout} />
-              </motion.div>
-            )}
-            {activeTab === 'calendar' && (
-              <motion.div key="calendar" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}>
-                <CalendarView tasks={tasks} />
-              </motion.div>
-            )}
-            {activeTab === 'stats' && (
-              <motion.div key="stats" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}>
-                <StatsView tasks={tasks} streak={streak} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+      <main className="main-content">
+        <div className="page-heading">
+          <p className="eyebrow">DAYMARK <span>·</span> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <h1>{pageTitles[activeTab][0]}</h1>
+          <p className="page-subtitle">{pageTitles[activeTab][1]}</p>
         </div>
+        <AnimatePresence mode="wait">
+          {activeTab === 'today' && (
+            <motion.div key="today" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+              <TaskPanel
+                username={auth.username}
+                tasks={tasks}
+                streak={streak}
+                searchQuery={searchQuery}
+                quickAddSignal={quickAddSignal}
+                onTasksChange={setTasks}
+                onStreakChange={setStreak}
+                onNotify={setNotice}
+              />
+            </motion.div>
+          )}
+          {activeTab === 'notes' && (
+            <motion.div key="notes" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+              <NotesPanel notes={notes} searchQuery={searchQuery} onNotesChange={setNotes} onNotify={setNotice} />
+            </motion.div>
+          )}
+          {activeTab === 'calendar' && (
+            <motion.div key="calendar" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+              <CalendarView tasks={tasks} />
+            </motion.div>
+          )}
+          {activeTab === 'stats' && (
+            <motion.div key="stats" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+              <StatsView tasks={tasks} streak={streak} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
+      {tabs.includes(activeTab) && (
+        <nav className="mobile-nav" aria-label="Main navigation">
+          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} taskCount={activeTaskCount} mobile />
+        </nav>
+      )}
+      {notice && <div className="toast toast-error" role="alert">{notice}<button aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button></div>}
     </div>
   );
 }

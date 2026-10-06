@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarDays, Download, FileText, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { createNote, deleteNote, downloadNotes, fetchNotes, updateNote } from '../api';
+import { DatePicker } from './DateTimePickers';
 import HighlightedText from './HighlightedText';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
@@ -127,7 +128,7 @@ export default function NotesPanel({ notes, searchQuery, onNotesChange, onNotify
               <label className="form-label" htmlFor="note-content">Your note</label>
               <textarea id="note-content" className="form-input note-textarea" maxLength={12000} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} placeholder="Write freely. You can tidy it up later." required />
               <div className="form-grid">
-                <div><label className="form-label" htmlFor="note-date">Date</label><input id="note-date" className="form-input" type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></div>
+                <DatePicker label="Date" id="note-date" value={form.date} onChange={(date) => setForm({ ...form, date })} />
                 <div><label className="form-label" htmlFor="note-tags">Tags</label><input id="note-tags" className="form-input" maxLength={500} value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="work, ideas" /></div>
               </div>
               <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setShowModal(false)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Saving…' : editingNote ? 'Save changes' : 'Save note'}</button></div>

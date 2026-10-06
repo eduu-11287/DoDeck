@@ -1,10 +1,139 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { CalendarDays, Check, ChevronDown, Circle, Clock3, Flame, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { createTask, deleteTask, fetchStreak, fetchTasks, updateTask } from '../api';
+import { DatePicker, TimePicker } from './DateTimePickers';
 import HighlightedText from './HighlightedText';
 
 const priorityLabels = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low' };
+
+function TaskFilter({ label, value, options, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const filterId = useId();
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !triggerRef.current) return undefined;
+
+    const positionMenu = () => {
+      const bounds = triggerRef.current.getBoundingClientRect();
+      const width = Math.min(Math.max(bounds.width, 180), window.innerWidth - 24);
+      const height = Math.min(options.length * 42, 280, window.innerHeight - 24);
+      const left = Math.max(12, Math.min(bounds.left, window.innerWidth - width - 12));
+      const spaceBelow = window.innerHeight - bounds.bottom;
+      const top = spaceBelow >= height + 12
+        ? bounds.bottom + 6
+        : Math.max(12, bounds.top - height - 6);
+      setMenuPosition({ top, left, width, maxHeight: Math.min(280, window.innerHeight - 24) });
+    };
+    const closeOnOutsidePointer = (event) => {
+      if (!triggerRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    const closeOnScroll = (event) => {
+      if (!menuRef.current?.contains(event.target)) setIsOpen(false);
+    };
+
+    positionMenu();
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('scroll', closeOnScroll, true);
+    window.addEventListener('resize', positionMenu);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('scroll', closeOnScroll, true);
+      window.removeEventListener('resize', positionMenu);
+    };
+  }, [isOpen, options.length]);
+
+  useEffect(() => {
+    if (isOpen) menuRef.current?.querySelector('[aria-selected="true"]')?.focus();
+  }, [isOpen]);
+
+  const handleEscape = (event) => {
+    if (event.key === 'Escape') {
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    }
+  };
+
+  const moveOptionFocus = (event) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const optionButtons = [...(menuRef.current?.querySelectorAll('[role="option"]') || [])];
+    const currentIndex = optionButtons.indexOf(document.activeElement);
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? optionButtons.length - 1
+        : (currentIndex + (event.key === 'ArrowDown' ? 1 : -1) + optionButtons.length) % optionButtons.length;
+    optionButtons[nextIndex]?.focus();
+  };
+
+  const selectedOption = options.find((option) => option.value === value);
+
+  return (
+    <div className="task-filter-field">
+      <span className="task-filter-label">{label}</span>
+      <button
+        ref={triggerRef}
+        id={`${filterId}-trigger`}
+        className="filter-trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={`${filterId}-options`}
+        onClick={() => setIsOpen((open) => !open)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            setIsOpen(true);
+          }
+        }}
+      >
+        <span>{selectedOption?.label}</span>
+        <ChevronDown size={15} aria-hidden="true" />
+      </button>
+      {isOpen && menuPosition && (
+        createPortal(
+          <div
+            ref={menuRef}
+            id={`${filterId}-options`}
+            className="filter-menu"
+            role="listbox"
+            aria-labelledby={`${filterId}-trigger`}
+            style={menuPosition}
+            onKeyDown={moveOptionFocus}
+          >
+            {options.map((option) => (
+              <button
+                key={option.value}
+                className={`filter-option${option.value === value ? ' selected' : ''}`}
+                type="button"
+                role="option"
+                aria-selected={option.value === value}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                  triggerRef.current?.focus();
+                }}
+              >
+                <span>{option.label}</span>
+                {option.value === value && <Check size={15} aria-hidden="true" />}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      )}
+    </div>
+  );
+}
 
 function dateLabel(task) {
   if (!task.dueDate) return '';
@@ -167,20 +296,35 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
       </div>
 
       <div className="task-filters" aria-label="Task filters">
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
-          <option value="active">Open tasks</option>
-          <option value="all">All tasks</option>
-          <option value="overdue">Overdue</option>
-          <option value="completed">Completed</option>
-        </select>
-        <select className="filter-select" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
-          <option value="all">All categories</option>
-          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-        </select>
-        <select className="filter-select" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} aria-label="Filter by priority">
-          <option value="all">All priorities</option>
-          {[1, 2, 3, 4].map((priority) => <option key={priority} value={priority}>{priorityLabels[priority]}</option>)}
-        </select>
+        <TaskFilter
+          label="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: 'active', label: 'Open tasks' },
+            { value: 'all', label: 'All tasks' },
+            { value: 'overdue', label: 'Overdue' },
+            { value: 'completed', label: 'Completed' },
+          ]}
+        />
+        <TaskFilter
+          label="Category"
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          options={[
+            { value: 'all', label: 'All categories' },
+            ...categories.map((category) => ({ value: category, label: category })),
+          ]}
+        />
+        <TaskFilter
+          label="Priority"
+          value={priorityFilter}
+          onChange={setPriorityFilter}
+          options={[
+            { value: 'all', label: 'All priorities' },
+            ...[1, 2, 3, 4].map((priority) => ({ value: String(priority), label: priorityLabels[priority] })),
+          ]}
+        />
       </div>
 
       <div className="task-list">
@@ -224,7 +368,14 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
                 {completedTasks.map((task) => (
                   <article className="task-card task-complete" key={task.id}>
                     <button className="task-check checked" onClick={() => toggleTask(task)} aria-label={`Reopen ${task.name}`}><Check size={14} /></button>
-                    <div className="task-main"><h3>{task.name}</h3>{task.category && <div className="task-meta"><span className="category-chip">{task.category}</span></div>}</div>
+                    <div className="task-main">
+                      <h3>{task.name}</h3>
+                      <div className="task-meta">
+                        {task.category && <span className="category-chip">{task.category}</span>}
+                        {task.dueDate && <span className="due-label"><CalendarDays size={13} />{dateLabel(task)}</span>}
+                        <span className={`priority-chip priority-${task.priority || 3}`}>{priorityLabels[task.priority || 3]}</span>
+                      </div>
+                    </div>
                     <button className="icon-button small delete-action" onClick={() => removeTask(task)} aria-label={`Delete ${task.name}`}><Trash2 size={15} /></button>
                   </article>
                 ))}
@@ -244,8 +395,8 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
               <div className="form-grid">
                 <div><label className="form-label" htmlFor="task-category">Category</label><input id="task-category" className="form-input" maxLength={80} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Personal" /></div>
                 <div><label className="form-label" htmlFor="task-priority">Priority</label><select id="task-priority" className="form-input" value={form.priority} onChange={(event) => setForm({ ...form, priority: Number(event.target.value) })}>{[1, 2, 3, 4].map((priority) => <option key={priority} value={priority}>{priorityLabels[priority]}</option>)}</select></div>
-                <div><label className="form-label" htmlFor="task-due-date">Due date</label><input id="task-due-date" className="form-input" type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} /></div>
-                <div><label className="form-label" htmlFor="task-due-time">Time</label><input id="task-due-time" className="form-input" type="time" value={form.dueTime} onChange={(event) => setForm({ ...form, dueTime: event.target.value })} /></div>
+                <DatePicker label="Due date" id="task-due-date" value={form.dueDate} onChange={(dueDate) => setForm({ ...form, dueDate })} />
+                <TimePicker label="Time" id="task-due-time" value={form.dueTime} onChange={(dueTime) => setForm({ ...form, dueTime })} />
               </div>
               <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setShowModal(false)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Saving…' : editingTask ? 'Save changes' : 'Add task'}</button></div>
             </motion.form>

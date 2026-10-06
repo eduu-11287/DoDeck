@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Sun, Moon, LogOut, X, Command } from 'lucide-react';
+import { Search, Sun, Moon, LogOut, X, Command, Download, ArrowUp } from 'lucide-react';
 
-export default function Header({ theme, toggleTheme, username, onLogout, searchQuery, onSearch, searchCounts }) {
+export default function Header({ theme, toggleTheme, username, onLogout, onInstall, searchQuery, onSearch, searchCounts }) {
   const [showSearch, setShowSearch] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const userMenuRef = useRef(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    const updateScrollTopVisibility = () => setShowScrollTop(window.scrollY > 320);
+    updateScrollTopVisibility();
+    window.addEventListener('scroll', updateScrollTopVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollTopVisibility);
+  }, []);
 
   useEffect(() => {
     const openSearch = () => setShowSearch(true);
@@ -61,6 +69,19 @@ export default function Header({ theme, toggleTheme, username, onLogout, searchQ
               {showUserMenu && (
                 <motion.div className="account-popover" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}>
                   <strong>{username}</strong>
+                  {onInstall && (
+                    <button
+                      className="install-menu-item"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onInstall();
+                      }}
+                      aria-label="Install Daymark app"
+                    >
+                      <Download size={16} />
+                      <span><strong>Install Daymark</strong><small>Add it to your device</small></span>
+                    </button>
+                  )}
                   <button onClick={onLogout}><LogOut size={15} /> Sign out</button>
                 </motion.div>
               )}
@@ -68,6 +89,17 @@ export default function Header({ theme, toggleTheme, username, onLogout, searchQ
           </div>
         </div>
       </header>
+
+      {showScrollTop && (
+        <button
+          className="scroll-top-button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Scroll to top"
+          title="Back to top"
+        >
+          <ArrowUp size={20} />
+        </button>
+      )}
 
       <AnimatePresence>
         {showSearch && (

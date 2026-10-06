@@ -11,6 +11,14 @@ import { checkAuth, fetchTasks, fetchNotes, fetchStreak, logout } from './api';
 
 const tabs = ['today', 'calendar', 'notes', 'stats'];
 
+function OfflineNotice() {
+  return (
+    <div className="offline-banner" role="status">
+      You’re offline. Daymark can open, but sign-in and account data need a connection.
+    </div>
+  );
+}
+
 export default function App() {
   const [auth, setAuth] = useState({ authenticated: false, username: '' });
   const [activeTab, setActiveTab] = useState('today');
@@ -22,6 +30,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [quickAddSignal, setQuickAddSignal] = useState(0);
   const [notice, setNotice] = useState('');
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -46,6 +57,61 @@ export default function App() {
     setNotes(loadedNotes);
     setStreak({ current: loadedStreak.current_streak, broken: loadedStreak.streak_broken });
   }, []);
+
+  useEffect(() => {
+    const onOffline = () => setIsOnline(false);
+    const onOnline = async () => {
+      setIsOnline(true);
+      try {
+        const currentAuth = await checkAuth();
+        setAuth(currentAuth);
+        if (currentAuth.authenticated) await loadData();
+      } catch (error) {
+        setNotice(`Connection restored, but Daymark couldn't refresh your workspace: ${error.message}`);
+      }
+    };
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [loadData]);
+
+  useEffect(() => {
+    setIsInstalled(
+      window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true,
+    );
+    const onBeforeInstallPrompt = (event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+    const onAppInstalled = () => {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, []);
+
+  const installApp = async () => {
+    if (!installPrompt) {
+      setNotice('To install Daymark, choose “Install app” or “Add to Home Screen” from your browser menu.');
+      return;
+    }
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') setInstallPrompt(null);
+    } catch (error) {
+      setNotice(`Daymark couldn't start installation: ${error.message}`);
+    }
+  };
 
   useEffect(() => {
     if (!auth.authenticated) return;
@@ -100,10 +166,13 @@ export default function App() {
 
   if (loading) {
     return (
-      <main className="loading-screen" aria-label="Loading Daymark">
-        <div className="brand-mark">d</div>
-        <p>Getting your day in order…</p>
-      </main>
+      <>
+        {!isOnline && <OfflineNotice />}
+        <main className="loading-screen" aria-label="Loading Daymark">
+          <div className="brand-mark">d</div>
+          <p>Getting your day in order…</p>
+        </main>
+      </>
     );
   }
 
@@ -111,6 +180,7 @@ export default function App() {
     return (
       <>
         <AuthOverlay onAuth={setAuth} />
+        {!isOnline && <OfflineNotice />}
         {notice && <div className="toast toast-error" role="alert">{notice}</div>}
       </>
     );
@@ -126,11 +196,13 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {!isOnline && <OfflineNotice />}
       <Header
         theme={theme}
         toggleTheme={toggleTheme}
         username={auth.username}
         onLogout={handleLogout}
+        onInstall={isInstalled ? null : installApp}
         searchQuery={searchQuery}
         onSearch={setSearchQuery}
         searchCounts={{

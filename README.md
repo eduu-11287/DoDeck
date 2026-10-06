@@ -88,11 +88,13 @@ npm run dev
 ## Features
 
 - **Task Management**: Create, edit, delete, and complete prioritized tasks with due dates
+- **Custom date and time pickers**: Responsive, app-styled controls for task deadlines and note dates
 - **Notes**: Add, edit, search, tag, and organize notes by date
 - **Streak Tracking**: Monitor daily productivity streaks
 - **Calendar**: Monthly task calendar with selected-day details
 - **PDF Export**: Download all notes as a formatted PDF
 - **Responsive Design**: Works on desktop and mobile
+- **Installable PWA**: Install Daymark and open its cached app shell offline; account data still requires a connection
 
 ## Tech Stack
 
@@ -120,6 +122,16 @@ npm run dev
 | `VITE_API_BASE` | Backend API URL | `http://localhost:5134` |
 
 ## Development
+
+### Progressive Web App
+
+The production client includes a web app manifest and a service worker that
+pre-caches the app shell and built JavaScript/CSS assets. Serve it over HTTPS
+or localhost to enable installation. The service worker deliberately does not
+cache API responses; sign-in, tasks, and notes require a network connection.
+Open the avatar menu and choose **Install Daymark** to install the app. If the
+browser does not provide an install prompt, Daymark explains where to find the
+browser's install or Add to Home Screen option.
 
 ### Backend
 ```bash

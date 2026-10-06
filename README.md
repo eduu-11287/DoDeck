@@ -31,29 +31,48 @@ daymark/
 ## Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose installed
+- Docker Engine with the Docker Compose plugin on Linux, or Docker Desktop on
+  Windows/macOS. Installation instructions are available in Docker's official
+  [Docker Desktop guide](https://docs.docker.com/desktop/) and
+  [Linux Engine guide](https://docs.docker.com/engine/install/).
+- Verify both Docker and Compose are available:
+
+  ```bash
+  docker --version
+  docker compose version
+  ```
+
+  On Windows or macOS, open Docker Desktop and wait until its engine is
+  running before starting the project.
 
 ### Run with Docker
 
 ```bash
-# Copy environment files
-cp server/.env.example server/.env
-cp client/.env.example client/.env
-
-# Start all services
-docker-compose up --build
-
-# Apply database migrations
-docker-compose exec server flask --app run.py db upgrade
+docker compose up --build
 ```
+
+On first run, this builds the frontend and backend images, downloads the
+PostgreSQL image, creates the database volume, and starts all three services.
+Wait for the startup logs, then open http://localhost:5173. The frontend
+proxies API requests to the backend internally. Database migrations run
+automatically when the backend starts.
+
+Keep the terminal open to view logs; press `Ctrl+C` to stop the services. To
+start them again without rebuilding, run `docker compose up`. Run
+`docker compose down` to remove the containers while retaining database data.
+To also delete the saved database volume, use `docker compose down -v`.
+
+The Compose setup uses local-development defaults for the database password
+and session secret. Before exposing this setup beyond your own machine, set a
+strong `SECRET_KEY` environment variable and change the database credentials.
 
 For a database that predates Alembic and was created by the old `run.py`
 auto-create flow, take a backup first, then mark the existing schema as the
 legacy baseline before applying the new additive migrations:
 
 ```bash
-docker-compose exec server flask --app run.py db stamp 1551bbe550f9
-docker-compose exec server flask --app run.py db upgrade
+docker compose exec server flask --app run.py db stamp 1551bbe550f9
+docker compose exec server flask --app run.py db upgrade
 ```
 
 If that unversioned database already has the task `priority` column and note
@@ -61,13 +80,13 @@ If that unversioned database already has the task `priority` column and note
 columns, use the matching predecessor revision instead:
 
 ```bash
-docker-compose exec server flask --app run.py db stamp 20261005_note_tags
-docker-compose exec server flask --app run.py db upgrade
+docker compose exec server flask --app run.py db stamp 20261005_note_tags
+docker compose exec server flask --app run.py db upgrade
 ```
 
 The app will be available at:
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:5134
+- Backend API (direct): http://localhost:5134
 
 ### Run Locally (without Docker)
 

@@ -25,10 +25,17 @@ services:
       FLASK_CONFIG: production
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       DATABASE_URL: postgresql://dodeck:dodeck_password@db:5432/dodeck
-      CORS_ORIGINS: http://localhost:3000,http://localhost:80
+      DATABASE_SSLMODE: disable
+      CORS_ORIGINS: http://localhost:5173,http://localhost:80
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:5134/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   client:
     build:
@@ -40,7 +47,8 @@ services:
     ports:
       - "5173:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
 volumes:
   postgres_data:

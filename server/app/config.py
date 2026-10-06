@@ -22,7 +22,7 @@ class ProductionConfig(Config):
     if SQLALCHEMY_DATABASE_URI and 'postgresql' in SQLALCHEMY_DATABASE_URI:
         SQLALCHEMY_ENGINE_OPTIONS = {
             "connect_args": {
-                "sslmode": "require"
+                "sslmode": os.getenv('DATABASE_SSLMODE', 'require')
             }
         }
 

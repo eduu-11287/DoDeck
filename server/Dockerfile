@@ -13,4 +13,4 @@ COPY . .
 
 EXPOSE 5134
 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5134", "run:app"]
+CMD ["sh", "-c", "flask --app run.py db upgrade && exec gunicorn -w 4 -b 0.0.0.0:5134 run:app"]

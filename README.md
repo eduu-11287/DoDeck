@@ -56,6 +56,15 @@ docker-compose exec server flask --app run.py db stamp 1551bbe550f9
 docker-compose exec server flask --app run.py db upgrade
 ```
 
+If that unversioned database already has the task `priority` column and note
+`tags` column, but not the new task description/checklist or note-task link
+columns, use the matching predecessor revision instead:
+
+```bash
+docker-compose exec server flask --app run.py db stamp 20261005_note_tags
+docker-compose exec server flask --app run.py db upgrade
+```
+
 The app will be available at:
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5134
@@ -76,6 +85,8 @@ python run.py
 
 For a pre-existing, unversioned local database, back it up and use
 `flask --app run.py db stamp 1551bbe550f9` before `flask --app run.py db upgrade`.
+If it already contains task priorities and note tags, stamp
+`20261005_note_tags` before upgrading.
 
 #### Frontend
 ```bash
@@ -87,14 +98,15 @@ npm run dev
 
 ## Features
 
-- **Task Management**: Create, edit, delete, and complete prioritized tasks with due dates
+- **Task Management**: Create, edit, delete, and complete prioritized tasks with due dates, descriptions, and checklists
 - **Custom date and time pickers**: Responsive, app-styled controls for task deadlines and note dates
-- **Notes**: Add, edit, search, tag, and organize notes by date
+- **Notes**: Add, edit, search, tag, and organize notes by date; optionally link a note to a task
 - **Streak Tracking**: Monitor daily productivity streaks
-- **Calendar**: Monthly task calendar with selected-day details
+- **Calendar**: Monthly task calendar with selected-day details and links to task details
+- **Insights**: Review task completion trends across 7-, 30-, and 90-day periods
 - **PDF Export**: Download all notes as a formatted PDF
 - **Responsive Design**: Works on desktop and mobile
-- **Installable PWA**: Install Daymark and open its cached app shell offline; account data still requires a connection
+- **Installable PWA**: Install Daymark and view the last saved account snapshot offline in read-only mode. The snapshot is kept in this browser's local storage and removed when you sign out.
 
 ## Tech Stack
 

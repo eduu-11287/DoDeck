@@ -8,6 +8,7 @@ import NotesPanel from './components/NotesPanel';
 import CalendarView from './components/CalendarView';
 import StatsView from './components/StatsView';
 import ItemDetail from './components/ItemDetail';
+import BrandMural from './components/BrandMural';
 import { checkAuth, deleteNote, deleteTask, fetchTasks, fetchNotes, fetchStreak, logout, updateTask } from './api';
 
 const tabs = ['today', 'calendar', 'notes', 'stats'];
@@ -21,10 +22,12 @@ function initialTab(route) {
   return route?.kind === 'notes' ? 'notes' : 'today';
 }
 
-function OfflineNotice() {
+function OfflineNotice({ snapshotAt }) {
   return (
     <div className="offline-banner" role="status">
-      You’re offline. Daymark can open, but sign-in and account data need a connection.
+      {snapshotAt
+        ? `Offline read-only · Showing saved workspace from ${new Date(snapshotAt).toLocaleString()}.`
+        : 'You’re offline. Your saved workspace is unavailable on this device.'}
     </div>
   );
 }
@@ -33,6 +36,7 @@ export default function App() {
   const [detailRoute, setDetailRoute] = useState(getDetailRoute);
   const [auth, setAuth] = useState({ authenticated: false, username: '' });
   const [activeTab, setActiveTab] = useState(() => initialTab(getDetailRoute()));
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState([]);
   const [streak, setStreak] = useState({ current: 0, broken: false });
@@ -45,6 +49,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [offlineSnapshotAt, setOfflineSnapshotAt] = useState(null);
   const [editRequest, setEditRequest] = useState(null);
   const editToken = useRef(0);
 
@@ -68,31 +73,120 @@ export default function App() {
 
   useEffect(() => {
     checkAuth()
-      .then(setAuth)
-      .catch((error) => setNotice(`Could not verify your session: ${error.message}`))
+      .then((currentAuth) => {
+        setAuth(currentAuth);
+      })
+      .catch((error) => {
+        if (!navigator.onLine) {
+          try {
+            const username = localStorage.getItem('daymark-offline-user');
+            const saved = username && localStorage.getItem(`daymark-offline-${encodeURIComponent(username)}`);
+            if (username && saved) {
+              setAuth({ authenticated: true, username });
+              return;
+            }
+          } catch (storageError) {
+            setNotice(`Could not access the saved offline workspace: ${storageError.message}`);
+            return;
+          }
+        }
+        setNotice(`Could not verify your session: ${error.message}`);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const loadData = useCallback(async () => {
-    const [loadedTasks, loadedNotes, loadedStreak] = await Promise.all([
-      fetchTasks(),
-      fetchNotes(),
-      fetchStreak(),
-    ]);
-    setTasks(loadedTasks);
-    setNotes(loadedNotes);
-    setStreak({ current: loadedStreak.current_streak, broken: loadedStreak.streak_broken });
-    setWorkspaceDataLoaded(true);
+  useEffect(() => {
+    if (!auth.authenticated) return;
+    try {
+      localStorage.setItem('daymark-offline-user', auth.username);
+    } catch (error) {
+      setNotice(`Could not remember this account for offline access: ${error.message}`);
+    }
+  }, [auth.authenticated, auth.username]);
+
+  const loadData = useCallback(async (username) => {
+    try {
+      const [loadedTasks, loadedNotes, loadedStreak] = await Promise.all([
+        fetchTasks(),
+        fetchNotes(),
+        fetchStreak(),
+      ]);
+      const savedStreak = { current: loadedStreak.current_streak, broken: loadedStreak.streak_broken };
+      setTasks(loadedTasks);
+      setNotes(loadedNotes);
+      setStreak(savedStreak);
+      setWorkspaceDataLoaded(true);
+      setOfflineSnapshotAt(null);
+      try {
+        localStorage.setItem(`daymark-offline-${encodeURIComponent(username)}`, JSON.stringify({
+          savedAt: new Date().toISOString(),
+          tasks: loadedTasks,
+          notes: loadedNotes,
+          streak: savedStreak,
+        }));
+      } catch (storageError) {
+        setNotice(`Couldn't save an offline workspace copy: ${storageError.message}`);
+      }
+    } catch (error) {
+      if (navigator.onLine) throw error;
+      const savedSnapshot = localStorage.getItem(`daymark-offline-${encodeURIComponent(username)}`);
+      if (!savedSnapshot) throw error;
+      try {
+        const saved = JSON.parse(savedSnapshot);
+        if (!Array.isArray(saved.tasks) || !Array.isArray(saved.notes) || !saved.streak || !saved.savedAt) {
+          throw new Error('Saved workspace data is incomplete.');
+        }
+        setTasks(saved.tasks);
+        setNotes(saved.notes);
+        setStreak(saved.streak);
+        setWorkspaceDataLoaded(true);
+        setOfflineSnapshotAt(saved.savedAt);
+      } catch (snapshotError) {
+        throw new Error(`Couldn't read the saved offline workspace: ${snapshotError.message}`);
+      }
+    }
   }, []);
 
   useEffect(() => {
-    const onOffline = () => setIsOnline(false);
+    if (!auth.authenticated || !workspaceDataLoaded || !isOnline) return;
+    try {
+      localStorage.setItem(`daymark-offline-${encodeURIComponent(auth.username)}`, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        tasks,
+        notes,
+        streak,
+      }));
+    } catch (error) {
+      setNotice(`Couldn't refresh the offline workspace copy: ${error.message}`);
+    }
+  }, [auth.authenticated, auth.username, isOnline, notes, streak, tasks, workspaceDataLoaded]);
+
+  useEffect(() => {
+    const onOffline = () => {
+      setIsOnline(false);
+      if (!auth.authenticated) return;
+      try {
+        const snapshot = localStorage.getItem(`daymark-offline-${encodeURIComponent(auth.username)}`);
+        if (!snapshot) {
+          setOfflineSnapshotAt(null);
+          return;
+        }
+        const saved = JSON.parse(snapshot);
+        if (!Array.isArray(saved.tasks) || !Array.isArray(saved.notes) || !saved.streak || !saved.savedAt) {
+          throw new Error('Saved workspace data is incomplete.');
+        }
+        setOfflineSnapshotAt(saved.savedAt);
+      } catch (error) {
+        setOfflineSnapshotAt(null);
+        setNotice(`Couldn't read the saved offline workspace: ${error.message}`);
+      }
+    };
     const onOnline = async () => {
       setIsOnline(true);
       try {
         const currentAuth = await checkAuth();
         setAuth(currentAuth);
-        if (currentAuth.authenticated) await loadData();
+        if (currentAuth.authenticated) await loadData(currentAuth.username);
       } catch (error) {
         setNotice(`Connection restored, but Daymark couldn't refresh your workspace: ${error.message}`);
       }
@@ -103,7 +197,7 @@ export default function App() {
       window.removeEventListener('offline', onOffline);
       window.removeEventListener('online', onOnline);
     };
-  }, [loadData]);
+  }, [auth.authenticated, auth.username, loadData]);
 
   useEffect(() => {
     setIsInstalled(
@@ -142,8 +236,8 @@ export default function App() {
 
   useEffect(() => {
     if (!auth.authenticated) return;
-    loadData().catch((error) => setNotice(`Couldn't load your workspace: ${error.message}`));
-  }, [auth.authenticated, loadData]);
+    loadData(auth.username).catch((error) => setNotice(`Couldn't load your workspace: ${error.message}`));
+  }, [auth.authenticated, auth.username, loadData]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -156,6 +250,13 @@ export default function App() {
     setTheme(nextTheme);
     localStorage.setItem('theme', nextTheme);
     document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  };
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((collapsed) => {
+      localStorage.setItem('sidebar-collapsed', String(!collapsed));
+      return !collapsed;
+    });
   };
 
   const openDetail = (kind, id) => {
@@ -195,6 +296,10 @@ export default function App() {
     setEditRequest({ kind, id: String(id), token: ++editToken.current });
   };
 
+  const consumeEditRequest = (token) => {
+    setEditRequest((current) => current?.token === token ? null : current);
+  };
+
   const toggleDetailTask = async (task) => {
     try {
       await updateTask(task.id, { isActive: !task.isActive });
@@ -211,6 +316,7 @@ export default function App() {
       if (kind === 'tasks') {
         await deleteTask(id);
         setTasks((current) => current.filter((task) => String(task.id) !== String(id)));
+        setNotes((current) => current.map((note) => String(note.taskId) === String(id) ? { ...note, taskId: null } : note));
       } else {
         await deleteNote(id);
         setNotes((current) => current.filter((note) => String(note.id) !== String(id)));
@@ -228,6 +334,8 @@ export default function App() {
       setTasks([]);
       setNotes([]);
       setSearchQuery('');
+      localStorage.removeItem('daymark-offline-user');
+      localStorage.removeItem(`daymark-offline-${encodeURIComponent(auth.username)}`);
     } catch (error) {
       setNotice(`Couldn't sign out: ${error.message}`);
     }
@@ -239,7 +347,7 @@ export default function App() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         document.dispatchEvent(new CustomEvent('daymark:search'));
-      } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n' && auth.authenticated) {
+      } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n' && auth.authenticated && isOnline) {
         event.preventDefault();
         setActiveTab('today');
         setQuickAddSignal((current) => current + 1);
@@ -252,12 +360,12 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [auth.authenticated]);
+  }, [auth.authenticated, auth.username, isOnline]);
 
   if (loading) {
     return (
       <>
-        {!isOnline && <OfflineNotice />}
+        {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
         <main className="loading-screen" aria-label="Loading Daymark">
           <div className="brand-mark">d</div>
           <p>Getting your day in order…</p>
@@ -270,7 +378,7 @@ export default function App() {
     return (
       <>
         <AuthOverlay onAuth={setAuth} />
-        {!isOnline && <OfflineNotice />}
+        {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
         {notice && <div className="toast toast-error" role="alert">{notice}</div>}
       </>
     );
@@ -285,8 +393,9 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
-      {!isOnline && <OfflineNotice />}
+    <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}${!isOnline ? ' offline-readonly' : ''}`}>
+      <BrandMural />
+      {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
       <Header
         theme={theme}
         toggleTheme={toggleTheme}
@@ -296,11 +405,17 @@ export default function App() {
         searchQuery={searchQuery}
         onSearch={setSearchQuery}
         searchCounts={{
-          tasks: tasks.filter((task) => `${task.name} ${task.category || ''}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
-          notes: notes.filter((note) => `${note.topic} ${note.content || ''}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
+          tasks: tasks.filter((task) => `${task.name} ${task.category || ''} ${task.description || ''} ${(task.checklist || []).map((item) => item.text).join(' ')}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
+          notes: notes.filter((note) => `${note.topic} ${note.content || ''} ${(note.tags || []).join(' ')}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
         }}
       />
-      <Sidebar activeTab={activeTab} setActiveTab={selectTab} taskCount={activeTaskCount} />
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={selectTab}
+        taskCount={activeTaskCount}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleSidebar}
+      />
 
       <main className="main-content">
         {detailRoute ? (
@@ -310,9 +425,21 @@ export default function App() {
               ? tasks.find((task) => String(task.id) === detailRoute.id)
               : notes.find((note) => String(note.id) === detailRoute.id)}
             onBack={returnFromDetail}
+            linkedNotes={detailRoute.kind === 'tasks' ? notes.filter((note) => String(note.taskId) === detailRoute.id) : []}
+            linkedTask={detailRoute.kind === 'notes' ? tasks.find((task) => String(task.id) === String(notes.find((note) => String(note.id) === detailRoute.id)?.taskId)) : null}
+            onOpenItem={(kind, id) => openDetail(kind, id)}
             onEdit={() => editDetailItem(detailRoute.kind, detailRoute.id)}
             onDelete={() => deleteDetailItem(detailRoute.kind, detailRoute.id)}
             onToggleTask={toggleDetailTask}
+            onUpdateTask={async (task, changes) => {
+              try {
+                const updated = await updateTask(task.id, changes);
+                setTasks((current) => current.map((entry) => entry.id === updated.id ? updated : entry));
+              } catch (error) {
+                setNotice(`Couldn't update this task: ${error.message}`);
+              }
+            }}
+            isOffline={!isOnline}
             isLoading={!workspaceDataLoaded}
           />
         ) : (
@@ -330,24 +457,29 @@ export default function App() {
                 searchQuery={searchQuery}
                 quickAddSignal={quickAddSignal}
                 editRequest={editRequest}
+                onEditRequestConsumed={consumeEditRequest}
                 onOpenItem={(id) => openDetail('tasks', id)}
                 onTasksChange={setTasks}
                 onStreakChange={setStreak}
                 onNotify={setNotice}
+                isOffline={!isOnline}
               />
             </div>
             <div className="view-content" hidden={activeTab !== 'notes'}>
               <NotesPanel
                 notes={notes}
+                tasks={tasks}
                 searchQuery={searchQuery}
                 editRequest={editRequest}
+                onEditRequestConsumed={consumeEditRequest}
                 onOpenItem={(id) => openDetail('notes', id)}
                 onNotesChange={setNotes}
                 onNotify={setNotice}
+                isOffline={!isOnline}
               />
             </div>
             <AnimatePresence mode="wait">
-              {activeTab === 'calendar' && <motion.div key="calendar" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><CalendarView tasks={tasks} /></motion.div>}
+              {activeTab === 'calendar' && <motion.div key="calendar" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><CalendarView tasks={tasks} onOpenItem={(id) => openDetail('tasks', id)} /></motion.div>}
               {activeTab === 'stats' && <motion.div key="stats" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><StatsView tasks={tasks} streak={streak} /></motion.div>}
             </AnimatePresence>
           </>

@@ -23,7 +23,7 @@ function usePopoverPosition(isOpen, setIsOpen, triggerRef, panelRef, width, heig
     const updatePosition = () => {
       const bounds = triggerRef.current.getBoundingClientRect();
       const panelWidth = Math.min(width, window.innerWidth - 24);
-      if (window.innerWidth <= 760) {
+      if (window.innerWidth <= 760 || window.innerHeight <= 640) {
         setPosition({
           mobile: true,
           style: {

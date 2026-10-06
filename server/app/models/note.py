@@ -13,6 +13,10 @@ class Note(db.Model):
     created_at = db.Column(
         db.DateTime, nullable=False, default=datetime.datetime.now
     )
+    task_id = db.Column(
+        db.Integer, db.ForeignKey('task.id', ondelete='SET NULL'),
+        nullable=True
+    )
     updated_at = db.Column(
         db.DateTime, nullable=False,
         default=datetime.datetime.now, onupdate=datetime.datetime.now
@@ -33,6 +37,7 @@ class Note(db.Model):
             'topic': self.topic,
             'content': self.content,
             'tags': [tag.strip() for tag in self.tags.split(',') if tag.strip()] if self.tags else [],
+            'taskId': self.task_id,
             'date': self.note_date.isoformat() if self.note_date else None,
             'createdAt': (
                 self.created_at.isoformat() if self.created_at else None

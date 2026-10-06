@@ -1,4 +1,4 @@
-import { CalendarDays, CheckSquare2, NotebookPen, ChartNoAxesColumnIncreasing } from 'lucide-react';
+import { CalendarDays, CheckSquare2, ChevronLeft, ChevronRight, NotebookPen, ChartNoAxesColumnIncreasing } from 'lucide-react';
 
 const items = [
   { id: 'today', icon: CheckSquare2, label: 'My day' },
@@ -7,9 +7,11 @@ const items = [
   { id: 'stats', icon: ChartNoAxesColumnIncreasing, label: 'Insights' },
 ];
 
-export default function Sidebar({ activeTab, setActiveTab, taskCount, mobile = false }) {
+export default function Sidebar({ activeTab, setActiveTab, taskCount, collapsed = false, onToggleCollapsed, mobile = false }) {
+  const dockClass = `side-nav${mobile ? ' side-nav-mobile' : ` side-nav-dock${collapsed ? ' collapsed' : ''}`}`;
+
   return (
-    <aside className={mobile ? 'side-nav side-nav-mobile' : 'side-nav'}>
+    <aside className={dockClass}>
       {!mobile && <p className="nav-label">WORKSPACE</p>}
       <nav aria-label="Workspace">
         {items.map(({ id, icon: Icon, label }) => (
@@ -19,19 +21,26 @@ export default function Sidebar({ activeTab, setActiveTab, taskCount, mobile = f
             onClick={() => setActiveTab(id)}
             aria-current={activeTab === id ? 'page' : undefined}
             aria-label={label}
+            data-tooltip={label}
           >
-            <Icon size={18} strokeWidth={activeTab === id ? 2.2 : 1.8} />
-            <span>{label}</span>
+            <span className="nav-icon"><Icon size={18} strokeWidth={activeTab === id ? 2.2 : 1.8} /></span>
+            <span className="nav-item-label">{label}</span>
             {id === 'today' && taskCount > 0 && <span className="nav-count">{taskCount}</span>}
           </button>
         ))}
       </nav>
       {!mobile && (
-        <div className="sidebar-note">
-          <span className="sidebar-note-icon">✳</span>
-          <strong>Make room for what matters.</strong>
-          <span>One thing at a time is enough.</span>
-        </div>
+        <button
+            className="dock-toggle"
+            type="button"
+            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            aria-pressed={!collapsed}
+            data-tooltip={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            onClick={onToggleCollapsed}
+          >
+            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
+            <span>{collapsed ? 'Expand navigation' : 'Collapse navigation'}</span>
+        </button>
       )}
     </aside>
   );

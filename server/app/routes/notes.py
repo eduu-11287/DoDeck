@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, session
-from app.models import Note
+from app.models import Note, Task
 from app import db
 from app.utils.decorators import login_required
 import datetime
@@ -38,6 +38,9 @@ def add_note():
         return jsonify({"error": "Note content must be 12,000 characters or fewer"}), 400
     if not valid_tags(data.get('tags')):
         return jsonify({"error": "Tags must be text or a list of text, up to 500 characters"}), 400
+    task_id, error = validated_task_id(data.get('taskId'), user_id)
+    if error:
+        return jsonify({"error": error}), 400
 
     note_date = datetime.date.today()
     if note_date_str is not None and note_date_str != '':
@@ -53,6 +56,7 @@ def add_note():
         content=content,
         tags=normalize_tags(data.get('tags')),
         note_date=note_date,
+        task_id=task_id,
         user_id=user_id
     )
     db.session.add(new_note)
@@ -89,6 +93,11 @@ def update_note(note_id):
         if not valid_tags(data['tags']):
             return jsonify({"error": "Tags must be text or a list of text, up to 500 characters"}), 400
         note.tags = normalize_tags(data['tags'])
+    if 'taskId' in data:
+        task_id, error = validated_task_id(data['taskId'], user_id)
+        if error:
+            return jsonify({"error": error}), 400
+        note.task_id = task_id
     if 'date' in data:
         if data['date'] is not None and data['date'] != '':
             if not isinstance(data['date'], str):
@@ -140,3 +149,14 @@ def valid_tags(tags):
     return isinstance(tags, list) and all(
         isinstance(tag, str) for tag in tags
     ) and sum(map(len, tags)) <= 500
+
+
+def validated_task_id(task_id, user_id):
+    if task_id is None or task_id == '':
+        return None, None
+    if not isinstance(task_id, int) or isinstance(task_id, bool):
+        return None, "Task association must be a task ID or null"
+    task = db.session.get(Task, task_id)
+    if task is None or task.user_id != user_id:
+        return None, "Linked task not found"
+    return task.id, None

@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, session
-from app.models import Task
+from app.models import Note, Task
 from app import db
 from app.utils.decorators import login_required
 import datetime
+import json
 
 tasks_bp = Blueprint('tasks', __name__)
 
@@ -24,6 +25,8 @@ def add_task():
         return jsonify({"error": "A JSON object is required"}), 400
     name = data.get('name')
     category = data.get('category', 'Uncategorized')
+    description = data.get('description', '')
+    checklist = data.get('checklist', [])
     priority = data.get('priority', 3)
     due_date_str = data.get('dueDate')
     due_time_str = data.get('dueTime')
@@ -40,6 +43,10 @@ def add_task():
         return jsonify({"error": "Category must be 80 characters or fewer"}), 400
     if len(name.strip()) > 120:
         return jsonify({"error": "Task name must be 120 characters or fewer"}), 400
+    if not isinstance(description, str) or len(description) > 5000:
+        return jsonify({"error": "Task description must be text up to 5,000 characters"}), 400
+    if not valid_checklist(checklist):
+        return jsonify({"error": "Checklist must contain up to 50 items with text up to 200 characters"}), 400
     if due_date_str is not None and not isinstance(due_date_str, str):
         return jsonify({"error": "Due date must be a string in YYYY-MM-DD format"}), 400
     if due_time_str is not None and not isinstance(due_time_str, str):
@@ -66,6 +73,8 @@ def add_task():
     new_task = Task(
         name=name.strip(),
         category=category,
+        description=description.strip() or None,
+        checklist_data=json.dumps(normalize_checklist(checklist)),
         priority=priority,
         is_active=True,
         due_date=due_datetime,
@@ -99,6 +108,15 @@ def update_task(task_id):
         if not isinstance(data['category'], str) or len(data['category']) > 80:
             return jsonify({"error": "Category must be 80 characters or fewer"}), 400
         task.category = data['category']
+    if 'description' in data:
+        description = data['description']
+        if not isinstance(description, str) or len(description) > 5000:
+            return jsonify({"error": "Task description must be text up to 5,000 characters"}), 400
+        task.description = description.strip() or None
+    if 'checklist' in data:
+        if not valid_checklist(data['checklist']):
+            return jsonify({"error": "Checklist must contain up to 50 items with text up to 200 characters"}), 400
+        task.checklist_data = json.dumps(normalize_checklist(data['checklist']))
     if 'priority' in data:
         priority = data['priority']
         if (
@@ -158,6 +176,28 @@ def update_task(task_id):
     return jsonify(task.to_dict())
 
 
+def valid_checklist(checklist):
+    return (
+        isinstance(checklist, list)
+        and len(checklist) <= 50
+        and all(
+            isinstance(item, dict)
+            and isinstance(item.get('text'), str)
+            and 0 < len(item['text'].strip())
+            and len(item['text']) <= 200
+            and isinstance(item.get('done', False), bool)
+            for item in checklist
+        )
+    )
+
+
+def normalize_checklist(checklist):
+    return [
+        {'text': item['text'].strip(), 'done': item.get('done', False)}
+        for item in checklist
+    ]
+
+
 @tasks_bp.route('/tasks/<int:task_id>', methods=['DELETE'])
 @login_required
 def delete_task(task_id):
@@ -167,6 +207,9 @@ def delete_task(task_id):
     if task is None or task.user_id != user_id:
         return jsonify({"message": "Task not found or not authorized"}), 404
 
+    Note.query.filter_by(task_id=task.id, user_id=user_id).update(
+        {Note.task_id: None}, synchronize_session=False
+    )
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"}), 200

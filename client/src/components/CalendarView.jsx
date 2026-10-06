@@ -3,7 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Circle } from 'lucide-react';
 
 const dateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-export default function CalendarView({ tasks }) {
+export default function CalendarView({ tasks, onOpenItem }) {
   const [monthDate, setMonthDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedKey, setSelectedKey] = useState(dateKey(new Date()));
   const year = monthDate.getFullYear();
@@ -42,7 +42,7 @@ export default function CalendarView({ tasks }) {
         <div className="calendar-month">
           <h2>{monthDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
           <div className="calendar-controls">
-            <button onClick={() => setMonthDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} aria-label="Go to current month">Today</button>
+            <button onClick={() => setMonthDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} aria-label="Go to current month" data-tooltip="Jump to this month">Today</button>
             <button onClick={() => changeMonth(-1)} aria-label="Previous month"><ChevronLeft size={16} /></button>
             <button onClick={() => changeMonth(1)} aria-label="Next month"><ChevronRight size={16} /></button>
           </div>
@@ -52,7 +52,7 @@ export default function CalendarView({ tasks }) {
           {cells.map(({ date, key, current }) => {
             const dayTasks = tasksByDate[key] || [];
             return (
-              <button key={key} className={`calendar-day${!current ? ' outside-month' : ''}${key === todayKey ? ' today' : ''}${key === selectedKey ? ' selected' : ''}`} onClick={() => setSelectedKey(key)} aria-label={`${date.toLocaleDateString()}, ${dayTasks.length} tasks`}>
+              <button key={key} className={`calendar-day${!current ? ' outside-month' : ''}${key === todayKey ? ' today' : ''}${key === selectedKey ? ' selected' : ''}`} onClick={() => setSelectedKey(key)} aria-label={`${date.toLocaleDateString()}, ${dayTasks.length} tasks`} data-tooltip={`${date.toLocaleDateString()} · ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}>
                 {date.getDate()}
                 {dayTasks.length > 0 && <span className="calendar-indicators">{dayTasks.slice(0, 3).map((task) => <i key={task.id} className={!task.isActive ? 'done' : ''} />)}</span>}
               </button>
@@ -65,10 +65,10 @@ export default function CalendarView({ tasks }) {
         <section className="calendar-side-card">
           <h3>{selectedKey ? new Date(`${selectedKey}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : 'Choose a day'}</h3>
           {selectedTasks.length ? selectedTasks.map((task) => (
-            <div className={`calendar-task${!task.isActive ? ' calendar-task-done' : ''}`} key={task.id}>
+            <button type="button" className={`calendar-task${!task.isActive ? ' calendar-task-done' : ''}`} key={task.id} onClick={() => onOpenItem(task.id)} aria-label={`Open task details: ${task.name}`}>
               {task.isActive ? <Circle size={14} /> : <Check size={14} />}
               <span>{task.name}</span>
-            </div>
+            </button>
           )) : <p>{selectedKey ? 'Nothing scheduled for this day.' : 'Select a date to see its tasks.'}</p>}
         </section>
         <section className="calendar-side-card">

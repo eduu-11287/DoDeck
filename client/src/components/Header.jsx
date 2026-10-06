@@ -55,14 +55,19 @@ export default function Header({ theme, toggleTheme, username, onLogout, onInsta
           <span>daymark</span>
         </a>
         <div className="topbar-actions">
-          <button className="search-trigger" onClick={() => setShowSearch(true)} aria-label="Search tasks and notes">
+          <button className="search-trigger" onClick={() => setShowSearch(true)} aria-label="Search tasks and notes" data-tooltip="Find a task or note">
             <Search size={17} /><span>Search</span><kbd><Command size={11} /> K</kbd>
           </button>
-          <button className="icon-button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+          <button
+            className="icon-button"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to Arctic Aurora dark theme'}
+            data-tooltip={theme === 'dark' ? 'Switch to light theme' : 'Switch to Arctic Aurora dark theme'}
+          >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <div className="profile-menu" ref={userMenuRef}>
-            <button className="avatar-button" onClick={() => setShowUserMenu(!showUserMenu)} aria-label="Account menu">
+            <button className="avatar-button" onClick={() => setShowUserMenu(!showUserMenu)} aria-label="Account menu" data-tooltip="Account and installation options">
               {username?.slice(0, 1)?.toUpperCase() || 'U'}
             </button>
             <AnimatePresence>
@@ -77,6 +82,7 @@ export default function Header({ theme, toggleTheme, username, onLogout, onInsta
                         onInstall();
                       }}
                       aria-label="Install Daymark app"
+                      data-tooltip="Install Daymark on this device"
                     >
                       <Download size={16} />
                       <span><strong>Install Daymark</strong><small>Add it to your device</small></span>
@@ -95,7 +101,7 @@ export default function Header({ theme, toggleTheme, username, onLogout, onInsta
           className="scroll-top-button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           aria-label="Scroll to top"
-          title="Back to top"
+          data-tooltip="Back to top"
         >
           <ArrowUp size={20} />
         </button>

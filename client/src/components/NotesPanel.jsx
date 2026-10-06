@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, CalendarDays, Download, FileText, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
+import { CalendarDays, Download, FileText, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { createNote, deleteNote, downloadNotes, fetchNotes, updateNote } from '../api';
 import { DatePicker } from './DateTimePickers';
+import DropdownSelect from './DropdownSelect';
 import HighlightedText from './HighlightedText';
+import ItemDetailLink from './ItemDetailLink';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
-export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem, onNotesChange, onNotify }) {
+export default function NotesPanel({ notes, tasks, searchQuery, editRequest, onEditRequestConsumed, onOpenItem, onNotesChange, onNotify, isOffline }) {
   const [showModal, setShowModal] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [tagFilter, setTagFilter] = useState('all');
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ topic: '', content: '', date: today(), tags: '' });
+  const [form, setForm] = useState({ topic: '', content: '', date: today(), tags: '', taskId: '' });
   const lastEditToken = useRef(null);
 
   const allTags = useMemo(() => [...new Set(notes.flatMap((note) => note.tags || []))].sort(), [notes]);
@@ -30,7 +32,7 @@ export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem
 
   const openNewNote = () => {
     setEditingNote(null);
-    setForm({ topic: '', content: '', date: today(), tags: '' });
+    setForm({ topic: '', content: '', date: today(), tags: '', taskId: '' });
     setShowModal(true);
   };
 
@@ -41,6 +43,7 @@ export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem
       content: note.content || '',
       date: note.date || today(),
       tags: (note.tags || []).join(', '),
+      taskId: note.taskId ? String(note.taskId) : '',
     });
     setShowModal(true);
   };
@@ -49,13 +52,17 @@ export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem
     if (editRequest?.kind !== 'notes' || editRequest.token === lastEditToken.current) return;
     lastEditToken.current = editRequest.token;
     const note = notes.find((item) => String(item.id) === editRequest.id);
-    if (note) beginEdit(note);
+    if (note) {
+      beginEdit(note);
+      onEditRequestConsumed(editRequest.token);
+    }
   }, [editRequest, notes]);
 
   const saveNote = async (event) => {
     event.preventDefault();
+    if (isOffline) return;
     setSaving(true);
-    const payload = { ...form, topic: form.topic.trim(), tags: form.tags.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean) };
+    const payload = { ...form, topic: form.topic.trim(), taskId: form.taskId ? Number(form.taskId) : null, tags: form.tags.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean) };
     try {
       if (editingNote) await updateNote(editingNote.id, payload);
       else await createNote(payload);
@@ -91,8 +98,8 @@ export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem
       <div className="notes-toolbar">
         <div className="notes-summary"><span className="notes-symbol"><FileText size={18} /></span><span><strong>{notes.length}</strong> {notes.length === 1 ? 'note' : 'notes'} saved</span></div>
         <div className="notes-actions">
-          <button className="secondary-button" onClick={exportNotes}><Download size={15} /> Export</button>
-          <button className="primary-button" onClick={openNewNote}><Plus size={17} /> New note</button>
+          <button className="secondary-button" onClick={exportNotes} disabled={isOffline}><Download size={15} /> Export</button>
+          <button className="primary-button" onClick={openNewNote} disabled={isOffline}><Plus size={17} /> New note</button>
         </div>
       </div>
 
@@ -109,10 +116,13 @@ export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem
           <AnimatePresence>
             {filteredNotes.map((note) => (
               <motion.article className="note-card" key={note.id} layout initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}>
-                <div className="note-card-top"><span className="note-date"><CalendarDays size={13} />{note.date ? format(new Date(`${note.date}T00:00:00`), 'MMM d, yyyy') : 'No date'}</span><span className="note-controls"><button className="icon-button small" onClick={() => onOpenItem(note.id)} aria-label={`Open details for ${note.topic}`}><ArrowUpRight size={14} /></button><button className="icon-button small" onClick={() => beginEdit(note)} aria-label={`Edit ${note.topic}`}><Pencil size={14} /></button><button className="icon-button small delete-action" onClick={() => removeNote(note)} aria-label={`Delete ${note.topic}`}><Trash2 size={14} /></button></span></div>
-                <h3><button className="item-title-link" onClick={() => onOpenItem(note.id)}><HighlightedText query={searchQuery}>{note.topic}</HighlightedText></button></h3>
-                <p className="note-content"><HighlightedText query={searchQuery}>{note.content}</HighlightedText></p>
-                {(note.tags || []).length > 0 && <div className="note-tags">{note.tags.map((tag) => <button key={tag} onClick={() => setTagFilter(tag)}>#{tag}</button>)}</div>}
+                <div className="note-card-top"><span className="note-date"><CalendarDays size={13} />{note.date ? format(new Date(`${note.date}T00:00:00`), 'MMM d, yyyy') : 'No date'}</span><span className="note-controls"><button className="icon-button small" onClick={(event) => { event.stopPropagation(); beginEdit(note); }} aria-label={`Edit ${note.topic}`} disabled={isOffline}><Pencil size={14} /></button><button className="icon-button small delete-action" onClick={(event) => { event.stopPropagation(); removeNote(note); }} aria-label={`Delete ${note.topic}`} disabled={isOffline}><Trash2 size={14} /></button></span></div>
+                <ItemDetailLink className="note-card-link" href={`/notes/${encodeURIComponent(note.id)}`} onOpen={() => onOpenItem(note.id)} ariaLabel={`Open note details: ${note.topic}`}>
+                  <h3><HighlightedText query={searchQuery}>{note.topic}</HighlightedText></h3>
+                  <p className="note-content"><HighlightedText query={searchQuery}>{note.content}</HighlightedText></p>
+                </ItemDetailLink>
+                {(note.tags || []).length > 0 && <div className="note-tags">{note.tags.map((tag) => <button key={tag} onClick={(event) => { event.stopPropagation(); setTagFilter(tag); }}>#{tag}</button>)}</div>}
+                {note.taskId && <span className="linked-task-label">Linked task: {tasks.find((task) => task.id === note.taskId)?.name || 'Task'}</span>}
               </motion.article>
             ))}
           </AnimatePresence>
@@ -122,7 +132,7 @@ export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem
           <span className="empty-icon"><Search size={21} /></span>
           <h3>{searchQuery || tagFilter !== 'all' ? 'No notes found.' : 'Save a thought for later.'}</h3>
           <p>{searchQuery ? 'Try another phrase or choose a different tag.' : 'Capture meeting notes, ideas, or the small things you want to remember.'}</p>
-          {!searchQuery && <button className="text-button" onClick={openNewNote}>Write a note <Plus size={15} /></button>}
+          {!searchQuery && <button className="text-button" onClick={openNewNote} disabled={isOffline}>Write a note <Plus size={15} /></button>}
         </div>
       )}
 
@@ -138,8 +148,9 @@ export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem
               <div className="form-grid">
                 <DatePicker label="Date" id="note-date" value={form.date} onChange={(date) => setForm({ ...form, date })} />
                 <div><label className="form-label" htmlFor="note-tags">Tags</label><input id="note-tags" className="form-input" maxLength={500} value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="work, ideas" /></div>
+                <div><label className="form-label" htmlFor="note-task">Related task</label><DropdownSelect id="note-task" className="form-select-trigger" label="Related task" value={form.taskId} onChange={(taskId) => setForm({ ...form, taskId })} options={[{ value: '', label: 'No linked task' }, ...tasks.map((task) => ({ value: String(task.id), label: task.name }))]} /></div>
               </div>
-              <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setShowModal(false)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Saving…' : editingNote ? 'Save changes' : 'Save note'}</button></div>
+              <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setShowModal(false)}>Cancel</button><button className="primary-button" type="submit" disabled={saving || isOffline}>{saving ? 'Saving…' : editingNote ? 'Save changes' : 'Save note'}</button></div>
             </motion.form>
           </motion.div>
         )}

@@ -1,11 +1,14 @@
 from app import db
 import datetime
+import json
 
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     category = db.Column(db.String(80), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    checklist_data = db.Column(db.Text, nullable=False, default='[]')
     is_active = db.Column(db.Boolean, default=True)
     priority = db.Column(db.Integer, nullable=False, default=3)
     due_date = db.Column(db.DateTime, nullable=True)
@@ -50,10 +53,13 @@ class Task(db.Model):
             return f"Due in {days} days"
 
     def to_dict(self):
+        checklist = json.loads(self.checklist_data or '[]')
         return {
             'id': self.id,
             'name': self.name,
             'category': self.category,
+            'description': self.description,
+            'checklist': checklist,
             'isActive': self.is_active,
             'priority': self.priority,
             'timeLeft': self.time_left,

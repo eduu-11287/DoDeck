@@ -1,10 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, CalendarDays, Check, ChevronDown, Circle, Clock3, Flame, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, Circle, Clock3, Flame, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { createTask, deleteTask, fetchStreak, fetchTasks, updateTask } from '../api';
 import { DatePicker, TimePicker } from './DateTimePickers';
+import DropdownSelect from './DropdownSelect';
 import HighlightedText from './HighlightedText';
+import ItemDetailLink from './ItemDetailLink';
 
 const priorityLabels = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low' };
 
@@ -155,10 +157,10 @@ function isOverdue(task) {
   return task.isActive && task.dueDate && new Date(task.dueDate) < new Date();
 }
 
-export default function TaskPanel({ username, tasks, streak, searchQuery, quickAddSignal, editRequest, onOpenItem, onTasksChange, onStreakChange, onNotify }) {
+export default function TaskPanel({ username, tasks, streak, searchQuery, quickAddSignal, editRequest, onEditRequestConsumed, onOpenItem, onTasksChange, onStreakChange, onNotify, isOffline }) {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [form, setForm] = useState({ name: '', category: '', dueDate: '', dueTime: '', priority: 3 });
+  const [form, setForm] = useState({ name: '', category: '', dueDate: '', dueTime: '', priority: 3, description: '', checklistText: '' });
   const [statusFilter, setStatusFilter] = useState('active');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -170,8 +172,9 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
   useEffect(() => {
     if (quickAddSignal !== lastQuickAdd.current) {
       lastQuickAdd.current = quickAddSignal;
+      if (isOffline) return;
       setEditingTask(null);
-      setForm({ name: '', category: '', dueDate: '', dueTime: '', priority: 3 });
+      setForm({ name: '', category: '', dueDate: '', dueTime: '', priority: 3, description: '', checklistText: '' });
       setShowModal(true);
     }
   }, [quickAddSignal]);
@@ -186,7 +189,7 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
   const filteredTasks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return tasks.filter((task) => {
-      if (query && !`${task.name} ${task.category || ''}`.toLowerCase().includes(query)) return false;
+      if (query && !`${task.name} ${task.category || ''} ${task.description || ''} ${(task.checklist || []).map((item) => item.text).join(' ')}`.toLowerCase().includes(query)) return false;
       if (categoryFilter !== 'all' && task.category !== categoryFilter) return false;
       if (priorityFilter !== 'all' && task.priority !== Number(priorityFilter)) return false;
       if (statusFilter === 'active' && !query && !task.isActive) return false;
@@ -207,7 +210,7 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
 
   const showNewTask = () => {
     setEditingTask(null);
-    setForm({ name: '', category: '', dueDate: '', dueTime: '', priority: 3 });
+    setForm({ name: '', category: '', dueDate: '', dueTime: '', priority: 3, description: '', checklistText: '' });
     setShowModal(true);
   };
 
@@ -219,6 +222,8 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
       dueTime: task.dueTime || '',
       priority: task.priority || 3,
+      description: task.description || '',
+      checklistText: (task.checklist || []).map((item) => item.text).join('\n'),
     });
     setShowModal(true);
   };
@@ -227,11 +232,15 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
     if (editRequest?.kind !== 'tasks' || editRequest.token === lastEditToken.current) return;
     lastEditToken.current = editRequest.token;
     const task = tasks.find((item) => String(item.id) === editRequest.id);
-    if (task) beginEdit(task);
+    if (task) {
+      beginEdit(task);
+      onEditRequestConsumed(editRequest.token);
+    }
   }, [editRequest, tasks]);
 
   const saveTask = async (event) => {
     event.preventDefault();
+    if (isOffline) return;
     setSaving(true);
     try {
       const payload = {
@@ -241,6 +250,11 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
         dueDate: form.dueDate || null,
         dueTime: form.dueTime || null,
         priority: Number(form.priority),
+        description: form.description,
+        checklist: form.checklistText.split('\n').map((text) => text.trim()).filter(Boolean).map((text) => ({
+          text,
+          done: (editingTask?.checklist || []).some((item) => item.text === text && item.done),
+        })),
       };
       if (editingTask) await updateTask(editingTask.id, payload);
       else await createTask(payload);
@@ -281,7 +295,7 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
           <span className="focus-kicker"><span className="focus-dot" /> TODAY’S FOCUS</span>
           <h2>{selectedTodayTask ? selectedTodayTask.name : 'You made it through your list.'}</h2>
           <p>{selectedTodayTask ? `Start here, ${username}. One focused step is a good day.` : 'Take a breath. You can add something new whenever you’re ready.'}</p>
-          <button className="focus-add" onClick={showNewTask}><Plus size={16} /> Add a task</button>
+          <button className="focus-add" onClick={showNewTask} disabled={isOffline}><Plus size={16} /> Add a task</button>
         </div>
         <div className="focus-progress" aria-label={`${progress}% of today's tasks complete`}>
           <svg viewBox="0 0 112 112" role="img" aria-hidden="true">
@@ -300,7 +314,7 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
 
       <div className="section-heading">
         <div><h2>Your tasks</h2><p>Prioritize what matters, then take it one at a time.</p></div>
-        <button className="primary-button add-task-button" onClick={showNewTask}><Plus size={17} /> New task</button>
+        <button className="primary-button add-task-button" onClick={showNewTask} disabled={isOffline}><Plus size={17} /> New task</button>
       </div>
 
       <div className="task-filters" aria-label="Task filters">
@@ -338,21 +352,23 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
       <div className="task-list">
         {filteredTasks.length ? filteredTasks.map((task) => (
           <motion.article className={`task-card${isOverdue(task) ? ' task-overdue' : ''}${!task.isActive ? ' task-complete' : ''}`} key={task.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 8 }}>
-            <button className={`task-check${!task.isActive ? ' checked' : ''}`} onClick={() => toggleTask(task)} aria-label={task.isActive ? `Complete ${task.name}` : `Reopen ${task.name}`}>
+            <button className={`task-check${!task.isActive ? ' checked' : ''}`} onClick={(event) => { event.stopPropagation(); toggleTask(task); }} aria-label={task.isActive ? `Complete ${task.name}` : `Reopen ${task.name}`} disabled={isOffline}>
               {!task.isActive && <Check size={14} />}
             </button>
             <div className="task-main">
-              <h3><button className="item-title-link" onClick={() => onOpenItem(task.id)}><HighlightedText query={searchQuery}>{task.name}</HighlightedText></button></h3>
-              <div className="task-meta">
-                {task.category && <span className="category-chip"><HighlightedText query={searchQuery}>{task.category}</HighlightedText></span>}
-                {task.dueDate && <span className={`due-label${isOverdue(task) ? ' overdue-label' : ''}`}><CalendarDays size={13} />{dateLabel(task)}</span>}
-                <span className={`priority-chip priority-${task.priority || 3}`}>{priorityLabels[task.priority || 3]}</span>
-              </div>
+              <ItemDetailLink className="task-card-link" href={`/tasks/${encodeURIComponent(task.id)}`} onOpen={() => onOpenItem(task.id)} ariaLabel={`Open task details: ${task.name}`}>
+                <h3><HighlightedText query={searchQuery}>{task.name}</HighlightedText></h3>
+                {task.description && <p className="task-description-preview">{task.description}</p>}
+                <div className="task-meta">
+                  {task.category && <span className="category-chip"><HighlightedText query={searchQuery}>{task.category}</HighlightedText></span>}
+                  {task.dueDate && <span className={`due-label${isOverdue(task) ? ' overdue-label' : ''}`}><CalendarDays size={13} />{dateLabel(task)}</span>}
+                  <span className={`priority-chip priority-${task.priority || 3}`}>{priorityLabels[task.priority || 3]}</span>
+                </div>
+              </ItemDetailLink>
             </div>
             <div className="task-actions">
-              <button className="icon-button small" onClick={() => onOpenItem(task.id)} aria-label={`Open details for ${task.name}`}><ArrowUpRight size={15} /></button>
-              <button className="icon-button small" onClick={() => beginEdit(task)} aria-label={`Edit ${task.name}`}><Pencil size={15} /></button>
-              <button className="icon-button small delete-action" onClick={() => removeTask(task)} aria-label={`Delete ${task.name}`}><Trash2 size={15} /></button>
+              <button className="icon-button small" onClick={(event) => { event.stopPropagation(); beginEdit(task); }} aria-label={`Edit ${task.name}`} disabled={isOffline}><Pencil size={15} /></button>
+              <button className="icon-button small delete-action" onClick={(event) => { event.stopPropagation(); removeTask(task); }} aria-label={`Delete ${task.name}`} disabled={isOffline}><Trash2 size={15} /></button>
             </div>
           </motion.article>
         )) : (
@@ -376,17 +392,19 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
               <motion.div className="task-list completed-list" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
                 {completedTasks.map((task) => (
                   <article className="task-card task-complete" key={task.id}>
-                    <button className="task-check checked" onClick={() => toggleTask(task)} aria-label={`Reopen ${task.name}`}><Check size={14} /></button>
+                    <button className="task-check checked" onClick={(event) => { event.stopPropagation(); toggleTask(task); }} aria-label={`Reopen ${task.name}`} disabled={isOffline}><Check size={14} /></button>
                     <div className="task-main">
-                      <h3><button className="item-title-link" onClick={() => onOpenItem(task.id)}>{task.name}</button></h3>
-                      <div className="task-meta">
-                        {task.category && <span className="category-chip">{task.category}</span>}
-                        {task.dueDate && <span className="due-label"><CalendarDays size={13} />{dateLabel(task)}</span>}
-                        <span className={`priority-chip priority-${task.priority || 3}`}>{priorityLabels[task.priority || 3]}</span>
-                      </div>
+                      <ItemDetailLink className="task-card-link" href={`/tasks/${encodeURIComponent(task.id)}`} onOpen={() => onOpenItem(task.id)} ariaLabel={`Open task details: ${task.name}`}>
+                        <h3>{task.name}</h3>
+                        {task.description && <p className="task-description-preview">{task.description}</p>}
+                        <div className="task-meta">
+                          {task.category && <span className="category-chip">{task.category}</span>}
+                          {task.dueDate && <span className="due-label"><CalendarDays size={13} />{dateLabel(task)}</span>}
+                          <span className={`priority-chip priority-${task.priority || 3}`}>{priorityLabels[task.priority || 3]}</span>
+                        </div>
+                      </ItemDetailLink>
                     </div>
-                    <button className="icon-button small" onClick={() => onOpenItem(task.id)} aria-label={`Open details for ${task.name}`}><ArrowUpRight size={15} /></button>
-                    <button className="icon-button small delete-action" onClick={() => removeTask(task)} aria-label={`Delete ${task.name}`}><Trash2 size={15} /></button>
+                    <button className="icon-button small delete-action" onClick={(event) => { event.stopPropagation(); removeTask(task); }} aria-label={`Delete ${task.name}`} disabled={isOffline}><Trash2 size={15} /></button>
                   </article>
                 ))}
               </motion.div>
@@ -402,13 +420,17 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
               <div className="dialog-heading"><div><span className="eyebrow">MAKE IT HAPPEN</span><h2>{editingTask ? 'Edit task' : 'New task'}</h2></div><button className="icon-button" type="button" onClick={() => setShowModal(false)} aria-label="Close"><X size={18} /></button></div>
               <label className="form-label" htmlFor="task-name">What needs doing?</label>
               <input id="task-name" className="form-input" autoFocus maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required placeholder="e.g. Send the project update" />
+              <label className="form-label" htmlFor="task-description">Description</label>
+              <textarea id="task-description" className="form-input task-description-input" maxLength={5000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Add context, links, or what done looks like." />
+              <label className="form-label" htmlFor="task-checklist">Checklist</label>
+              <textarea id="task-checklist" className="form-input task-checklist-input" maxLength={10000} value={form.checklistText} onChange={(event) => setForm({ ...form, checklistText: event.target.value })} placeholder={'One step per line\nReview the draft\nSend it to the team'} />
               <div className="form-grid">
                 <div><label className="form-label" htmlFor="task-category">Category</label><input id="task-category" className="form-input" maxLength={80} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Personal" /></div>
-                <div><label className="form-label" htmlFor="task-priority">Priority</label><select id="task-priority" className="form-input" value={form.priority} onChange={(event) => setForm({ ...form, priority: Number(event.target.value) })}>{[1, 2, 3, 4].map((priority) => <option key={priority} value={priority}>{priorityLabels[priority]}</option>)}</select></div>
+                <div><label className="form-label" htmlFor="task-priority">Priority</label><DropdownSelect id="task-priority" className="form-select-trigger" label="Priority" value={String(form.priority)} onChange={(priority) => setForm({ ...form, priority: Number(priority) })} options={[1, 2, 3, 4].map((priority) => ({ value: String(priority), label: priorityLabels[priority] }))} /></div>
                 <DatePicker label="Due date" id="task-due-date" value={form.dueDate} onChange={(dueDate) => setForm({ ...form, dueDate })} />
                 <TimePicker label="Time" id="task-due-time" value={form.dueTime} onChange={(dueTime) => setForm({ ...form, dueTime })} />
               </div>
-              <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setShowModal(false)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Saving…' : editingTask ? 'Save changes' : 'Add task'}</button></div>
+              <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setShowModal(false)}>Cancel</button><button className="primary-button" type="submit" disabled={saving || isOffline}>{saving ? 'Saving…' : editingTask ? 'Save changes' : 'Add task'}</button></div>
             </motion.form>
           </motion.div>
         )}

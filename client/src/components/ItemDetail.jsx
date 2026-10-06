@@ -15,7 +15,7 @@ function formattedTime(value) {
     .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-export default function ItemDetail({ kind, item, onBack, onEdit, onDelete, onToggleTask, isLoading }) {
+export default function ItemDetail({ kind, item, linkedNotes = [], linkedTask, onBack, onOpenItem, onEdit, onDelete, onToggleTask, onUpdateTask, isOffline, isLoading }) {
   const isTask = kind === 'tasks';
 
   return (
@@ -34,10 +34,10 @@ export default function ItemDetail({ kind, item, onBack, onEdit, onDelete, onTog
             <div className="detail-hero-top">
               <span className="detail-type">{isTask ? 'TASK DETAILS' : 'YOUR NOTE'}</span>
               <div className="detail-actions">
-                <button className="secondary-button" onClick={onEdit}><Pencil size={15} /> Edit</button>
+                <button className="secondary-button" onClick={onEdit} disabled={isOffline}><Pencil size={15} /> Edit</button>
                 <button className="icon-button delete-action" onClick={() => {
                   if (window.confirm(`Delete “${isTask ? item.name : item.topic}”?`)) onDelete();
-                }} aria-label={`Delete ${isTask ? item.name : item.topic}`}><Trash2 size={16} /></button>
+                }} aria-label={`Delete ${isTask ? item.name : item.topic}`} disabled={isOffline}><Trash2 size={16} /></button>
               </div>
             </div>
             <div className="detail-title-wrap">
@@ -65,11 +65,29 @@ export default function ItemDetail({ kind, item, onBack, onEdit, onDelete, onTog
                   <div><dt>Priority</dt><dd><span className={`priority-chip priority-${item.priority || 3}`}>{({ 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low' })[item.priority || 3]}</span></dd></div>
                   {!item.isActive && item.completedAt && <div><dt>Completed</dt><dd>{new Date(item.completedAt).toLocaleString()}</dd></div>}
                 </dl>
+                {item.description && <div className="detail-description"><h3>Description</h3><p>{item.description}</p></div>}
+                {item.checklist?.length > 0 && (
+                  <div className="detail-checklist">
+                    <h3>Checklist <span>{item.checklist.filter((entry) => entry.done).length}/{item.checklist.length}</span></h3>
+                    {item.checklist.map((entry, index) => (
+                      <label className={`checklist-item${entry.done ? ' is-done' : ''}`} key={`${entry.text}-${index}`}>
+                        <input type="checkbox" checked={entry.done} disabled={isOffline} onChange={() => onUpdateTask(item, { checklist: item.checklist.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, done: !candidate.done } : candidate) })} />
+                        <span>{entry.text}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {linkedNotes.length > 0 && (
+                  <div className="related-items">
+                    <h3>Related notes</h3>
+                    {linkedNotes.map((note) => <button key={note.id} onClick={() => onOpenItem('notes', note.id)}>{note.topic}</button>)}
+                  </div>
+                )}
               </article>
               <aside className="detail-next-step">
                 <span className="detail-next-icon">{item.isActive ? <Check size={20} /> : <RotateCcw size={20} />}</span>
                 <div><h2>{item.isActive ? 'Ready when you are.' : 'Progress counts.'}</h2><p>{item.isActive ? 'Mark this task complete when it’s done.' : 'You can reopen this task if there’s more to do.'}</p></div>
-                <button className={item.isActive ? 'primary-button' : 'secondary-button'} onClick={() => onToggleTask(item)}>
+                <button className={item.isActive ? 'primary-button' : 'secondary-button'} onClick={() => onToggleTask(item)} disabled={isOffline}>
                   {item.isActive ? <><Check size={16} /> Mark complete</> : <><RotateCcw size={16} /> Reopen task</>}
                 </button>
               </aside>
@@ -78,6 +96,7 @@ export default function ItemDetail({ kind, item, onBack, onEdit, onDelete, onTog
             <article className="detail-card note-reading-card">
               <div className="note-reading-meta"><span><CalendarDays size={14} />{formattedDate(item.date) || 'No date'}</span>{item.updatedAt && <span>Updated {new Date(item.updatedAt).toLocaleDateString()}</span>}</div>
               <div className="note-reading-content">{item.content || 'This note has no content yet.'}</div>
+              {linkedTask && <div className="related-items"><h3>Related task</h3><button onClick={() => onOpenItem('tasks', linkedTask.id)}>{linkedTask.name}</button></div>}
             </article>
           )}
         </>

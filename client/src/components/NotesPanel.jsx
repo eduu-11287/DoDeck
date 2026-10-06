@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarDays, Download, FileText, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Download, FileText, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { createNote, deleteNote, downloadNotes, fetchNotes, updateNote } from '../api';
 import { DatePicker } from './DateTimePickers';
@@ -8,12 +8,13 @@ import HighlightedText from './HighlightedText';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
-export default function NotesPanel({ notes, searchQuery, onNotesChange, onNotify }) {
+export default function NotesPanel({ notes, searchQuery, editRequest, onOpenItem, onNotesChange, onNotify }) {
   const [showModal, setShowModal] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [tagFilter, setTagFilter] = useState('all');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ topic: '', content: '', date: today(), tags: '' });
+  const lastEditToken = useRef(null);
 
   const allTags = useMemo(() => [...new Set(notes.flatMap((note) => note.tags || []))].sort(), [notes]);
   const filteredNotes = useMemo(() => {
@@ -43,6 +44,13 @@ export default function NotesPanel({ notes, searchQuery, onNotesChange, onNotify
     });
     setShowModal(true);
   };
+
+  useEffect(() => {
+    if (editRequest?.kind !== 'notes' || editRequest.token === lastEditToken.current) return;
+    lastEditToken.current = editRequest.token;
+    const note = notes.find((item) => String(item.id) === editRequest.id);
+    if (note) beginEdit(note);
+  }, [editRequest, notes]);
 
   const saveNote = async (event) => {
     event.preventDefault();
@@ -101,8 +109,8 @@ export default function NotesPanel({ notes, searchQuery, onNotesChange, onNotify
           <AnimatePresence>
             {filteredNotes.map((note) => (
               <motion.article className="note-card" key={note.id} layout initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}>
-                <div className="note-card-top"><span className="note-date"><CalendarDays size={13} />{note.date ? format(new Date(`${note.date}T00:00:00`), 'MMM d, yyyy') : 'No date'}</span><span className="note-controls"><button className="icon-button small" onClick={() => beginEdit(note)} aria-label={`Edit ${note.topic}`}><Pencil size={14} /></button><button className="icon-button small delete-action" onClick={() => removeNote(note)} aria-label={`Delete ${note.topic}`}><Trash2 size={14} /></button></span></div>
-                <h3><HighlightedText query={searchQuery}>{note.topic}</HighlightedText></h3>
+                <div className="note-card-top"><span className="note-date"><CalendarDays size={13} />{note.date ? format(new Date(`${note.date}T00:00:00`), 'MMM d, yyyy') : 'No date'}</span><span className="note-controls"><button className="icon-button small" onClick={() => onOpenItem(note.id)} aria-label={`Open details for ${note.topic}`}><ArrowUpRight size={14} /></button><button className="icon-button small" onClick={() => beginEdit(note)} aria-label={`Edit ${note.topic}`}><Pencil size={14} /></button><button className="icon-button small delete-action" onClick={() => removeNote(note)} aria-label={`Delete ${note.topic}`}><Trash2 size={14} /></button></span></div>
+                <h3><button className="item-title-link" onClick={() => onOpenItem(note.id)}><HighlightedText query={searchQuery}>{note.topic}</HighlightedText></button></h3>
                 <p className="note-content"><HighlightedText query={searchQuery}>{note.content}</HighlightedText></p>
                 {(note.tags || []).length > 0 && <div className="note-tags">{note.tags.map((tag) => <button key={tag} onClick={() => setTagFilter(tag)}>#{tag}</button>)}</div>}
               </motion.article>

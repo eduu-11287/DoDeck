@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { CalendarDays, Check, ChevronDown, Circle, Clock3, Flame, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Check, ChevronDown, Circle, Clock3, Flame, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { createTask, deleteTask, fetchStreak, fetchTasks, updateTask } from '../api';
 import { DatePicker, TimePicker } from './DateTimePickers';
 import HighlightedText from './HighlightedText';
@@ -155,7 +155,7 @@ function isOverdue(task) {
   return task.isActive && task.dueDate && new Date(task.dueDate) < new Date();
 }
 
-export default function TaskPanel({ username, tasks, streak, searchQuery, quickAddSignal, onTasksChange, onStreakChange, onNotify }) {
+export default function TaskPanel({ username, tasks, streak, searchQuery, quickAddSignal, editRequest, onOpenItem, onTasksChange, onStreakChange, onNotify }) {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState({ name: '', category: '', dueDate: '', dueTime: '', priority: 3 });
@@ -165,6 +165,7 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
   const [showCompleted, setShowCompleted] = useState(false);
   const [saving, setSaving] = useState(false);
   const lastQuickAdd = useRef(quickAddSignal);
+  const lastEditToken = useRef(null);
 
   useEffect(() => {
     if (quickAddSignal !== lastQuickAdd.current) {
@@ -221,6 +222,13 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
     });
     setShowModal(true);
   };
+
+  useEffect(() => {
+    if (editRequest?.kind !== 'tasks' || editRequest.token === lastEditToken.current) return;
+    lastEditToken.current = editRequest.token;
+    const task = tasks.find((item) => String(item.id) === editRequest.id);
+    if (task) beginEdit(task);
+  }, [editRequest, tasks]);
 
   const saveTask = async (event) => {
     event.preventDefault();
@@ -334,7 +342,7 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
               {!task.isActive && <Check size={14} />}
             </button>
             <div className="task-main">
-              <h3><HighlightedText query={searchQuery}>{task.name}</HighlightedText></h3>
+              <h3><button className="item-title-link" onClick={() => onOpenItem(task.id)}><HighlightedText query={searchQuery}>{task.name}</HighlightedText></button></h3>
               <div className="task-meta">
                 {task.category && <span className="category-chip"><HighlightedText query={searchQuery}>{task.category}</HighlightedText></span>}
                 {task.dueDate && <span className={`due-label${isOverdue(task) ? ' overdue-label' : ''}`}><CalendarDays size={13} />{dateLabel(task)}</span>}
@@ -342,6 +350,7 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
               </div>
             </div>
             <div className="task-actions">
+              <button className="icon-button small" onClick={() => onOpenItem(task.id)} aria-label={`Open details for ${task.name}`}><ArrowUpRight size={15} /></button>
               <button className="icon-button small" onClick={() => beginEdit(task)} aria-label={`Edit ${task.name}`}><Pencil size={15} /></button>
               <button className="icon-button small delete-action" onClick={() => removeTask(task)} aria-label={`Delete ${task.name}`}><Trash2 size={15} /></button>
             </div>
@@ -369,13 +378,14 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
                   <article className="task-card task-complete" key={task.id}>
                     <button className="task-check checked" onClick={() => toggleTask(task)} aria-label={`Reopen ${task.name}`}><Check size={14} /></button>
                     <div className="task-main">
-                      <h3>{task.name}</h3>
+                      <h3><button className="item-title-link" onClick={() => onOpenItem(task.id)}>{task.name}</button></h3>
                       <div className="task-meta">
                         {task.category && <span className="category-chip">{task.category}</span>}
                         {task.dueDate && <span className="due-label"><CalendarDays size={13} />{dateLabel(task)}</span>}
                         <span className={`priority-chip priority-${task.priority || 3}`}>{priorityLabels[task.priority || 3]}</span>
                       </div>
                     </div>
+                    <button className="icon-button small" onClick={() => onOpenItem(task.id)} aria-label={`Open details for ${task.name}`}><ArrowUpRight size={15} /></button>
                     <button className="icon-button small delete-action" onClick={() => removeTask(task)} aria-label={`Delete ${task.name}`}><Trash2 size={15} /></button>
                   </article>
                 ))}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -7,9 +7,19 @@ import TaskPanel from './components/TaskPanel';
 import NotesPanel from './components/NotesPanel';
 import CalendarView from './components/CalendarView';
 import StatsView from './components/StatsView';
-import { checkAuth, fetchTasks, fetchNotes, fetchStreak, logout } from './api';
+import ItemDetail from './components/ItemDetail';
+import { checkAuth, deleteNote, deleteTask, fetchTasks, fetchNotes, fetchStreak, logout, updateTask } from './api';
 
 const tabs = ['today', 'calendar', 'notes', 'stats'];
+
+function getDetailRoute() {
+  const match = window.location.pathname.match(/^\/(tasks|notes)\/([^/]+)\/?$/);
+  return match ? { kind: match[1], id: match[2] } : null;
+}
+
+function initialTab(route) {
+  return route?.kind === 'notes' ? 'notes' : 'today';
+}
 
 function OfflineNotice() {
   return (
@@ -20,12 +30,14 @@ function OfflineNotice() {
 }
 
 export default function App() {
+  const [detailRoute, setDetailRoute] = useState(getDetailRoute);
   const [auth, setAuth] = useState({ authenticated: false, username: '' });
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState(() => initialTab(getDetailRoute()));
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState([]);
   const [streak, setStreak] = useState({ current: 0, broken: false });
   const [loading, setLoading] = useState(true);
+  const [workspaceDataLoaded, setWorkspaceDataLoaded] = useState(false);
   const [theme, setTheme] = useState('light');
   const [searchQuery, setSearchQuery] = useState('');
   const [quickAddSignal, setQuickAddSignal] = useState(0);
@@ -33,6 +45,20 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [editRequest, setEditRequest] = useState(null);
+  const editToken = useRef(0);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const route = getDetailRoute();
+      setDetailRoute(route);
+      const savedTab = window.history.state?.daymarkTab;
+      setActiveTab(route ? initialTab(route) : tabs.includes(savedTab) ? savedTab : 'today');
+      window.requestAnimationFrame(() => window.scrollTo(0, window.history.state?.daymarkScrollY || 0));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -56,6 +82,7 @@ export default function App() {
     setTasks(loadedTasks);
     setNotes(loadedNotes);
     setStreak({ current: loadedStreak.current_streak, broken: loadedStreak.streak_broken });
+    setWorkspaceDataLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -129,6 +156,69 @@ export default function App() {
     setTheme(nextTheme);
     localStorage.setItem('theme', nextTheme);
     document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  };
+
+  const openDetail = (kind, id) => {
+    const tab = kind === 'notes' ? 'notes' : 'today';
+    const from = { tab: activeTab, scrollY: window.scrollY };
+    window.history.replaceState({ ...window.history.state, daymarkTab: activeTab, daymarkScrollY: window.scrollY }, '', window.location.href);
+    window.history.pushState({ daymarkFrom: from }, '', `/${kind}/${encodeURIComponent(id)}`);
+    setDetailRoute({ kind, id: String(id) });
+    setActiveTab(tab);
+    window.scrollTo(0, 0);
+  };
+
+  const showList = (tab = activeTab) => {
+    window.history.replaceState({ daymarkTab: tab, daymarkScrollY: 0 }, '', '/');
+    setDetailRoute(null);
+    setActiveTab(tab);
+    window.scrollTo(0, 0);
+  };
+
+  const returnFromDetail = () => {
+    const from = window.history.state?.daymarkFrom;
+    if (from) {
+      window.history.back();
+      return;
+    }
+    showList(initialTab(detailRoute));
+  };
+
+  const selectTab = (tab) => {
+    if (detailRoute) showList(tab);
+    else setActiveTab(tab);
+  };
+
+  const editDetailItem = (kind, id) => {
+    const tab = kind === 'notes' ? 'notes' : 'today';
+    showList(tab);
+    setEditRequest({ kind, id: String(id), token: ++editToken.current });
+  };
+
+  const toggleDetailTask = async (task) => {
+    try {
+      await updateTask(task.id, { isActive: !task.isActive });
+      const [updatedTasks, latestStreak] = await Promise.all([fetchTasks(), fetchStreak()]);
+      setTasks(updatedTasks);
+      setStreak({ current: latestStreak.current_streak, broken: latestStreak.streak_broken });
+    } catch (error) {
+      setNotice(`Couldn't update this task: ${error.message}`);
+    }
+  };
+
+  const deleteDetailItem = async (kind, id) => {
+    try {
+      if (kind === 'tasks') {
+        await deleteTask(id);
+        setTasks((current) => current.filter((task) => String(task.id) !== String(id)));
+      } else {
+        await deleteNote(id);
+        setNotes((current) => current.filter((note) => String(note.id) !== String(id)));
+      }
+      returnFromDetail();
+    } catch (error) {
+      setNotice(`Couldn't delete this ${kind === 'tasks' ? 'task' : 'note'}: ${error.message}`);
+    }
   };
 
   const handleLogout = async () => {
@@ -210,49 +300,62 @@ export default function App() {
           notes: notes.filter((note) => `${note.topic} ${note.content || ''}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
         }}
       />
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} taskCount={activeTaskCount} />
+      <Sidebar activeTab={activeTab} setActiveTab={selectTab} taskCount={activeTaskCount} />
 
       <main className="main-content">
-        <div className="page-heading">
-          <p className="eyebrow">DAYMARK <span>·</span> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-          <h1>{pageTitles[activeTab][0]}</h1>
-          <p className="page-subtitle">{pageTitles[activeTab][1]}</p>
-        </div>
-        <AnimatePresence mode="wait">
-          {activeTab === 'today' && (
-            <motion.div key="today" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+        {detailRoute ? (
+          <ItemDetail
+            kind={detailRoute.kind}
+            item={detailRoute.kind === 'tasks'
+              ? tasks.find((task) => String(task.id) === detailRoute.id)
+              : notes.find((note) => String(note.id) === detailRoute.id)}
+            onBack={returnFromDetail}
+            onEdit={() => editDetailItem(detailRoute.kind, detailRoute.id)}
+            onDelete={() => deleteDetailItem(detailRoute.kind, detailRoute.id)}
+            onToggleTask={toggleDetailTask}
+            isLoading={!workspaceDataLoaded}
+          />
+        ) : (
+          <>
+            <div className="page-heading">
+              <p className="eyebrow">DAYMARK <span>·</span> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+              <h1>{pageTitles[activeTab][0]}</h1>
+              <p className="page-subtitle">{pageTitles[activeTab][1]}</p>
+            </div>
+            <div className="view-content" hidden={activeTab !== 'today'}>
               <TaskPanel
                 username={auth.username}
                 tasks={tasks}
                 streak={streak}
                 searchQuery={searchQuery}
                 quickAddSignal={quickAddSignal}
+                editRequest={editRequest}
+                onOpenItem={(id) => openDetail('tasks', id)}
                 onTasksChange={setTasks}
                 onStreakChange={setStreak}
                 onNotify={setNotice}
               />
-            </motion.div>
-          )}
-          {activeTab === 'notes' && (
-            <motion.div key="notes" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <NotesPanel notes={notes} searchQuery={searchQuery} onNotesChange={setNotes} onNotify={setNotice} />
-            </motion.div>
-          )}
-          {activeTab === 'calendar' && (
-            <motion.div key="calendar" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <CalendarView tasks={tasks} />
-            </motion.div>
-          )}
-          {activeTab === 'stats' && (
-            <motion.div key="stats" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <StatsView tasks={tasks} streak={streak} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+            <div className="view-content" hidden={activeTab !== 'notes'}>
+              <NotesPanel
+                notes={notes}
+                searchQuery={searchQuery}
+                editRequest={editRequest}
+                onOpenItem={(id) => openDetail('notes', id)}
+                onNotesChange={setNotes}
+                onNotify={setNotice}
+              />
+            </div>
+            <AnimatePresence mode="wait">
+              {activeTab === 'calendar' && <motion.div key="calendar" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><CalendarView tasks={tasks} /></motion.div>}
+              {activeTab === 'stats' && <motion.div key="stats" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><StatsView tasks={tasks} streak={streak} /></motion.div>}
+            </AnimatePresence>
+          </>
+        )}
       </main>
       {tabs.includes(activeTab) && (
         <nav className="mobile-nav" aria-label="Main navigation">
-          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} taskCount={activeTaskCount} mobile />
+          <Sidebar activeTab={activeTab} setActiveTab={selectTab} taskCount={activeTaskCount} mobile />
         </nav>
       )}
       {notice && <div className="toast toast-error" role="alert">{notice}<button aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button></div>}

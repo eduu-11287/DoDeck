@@ -252,6 +252,47 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .note-tags button { padding: 4px 7px; border: 0; border-radius: 5px; color: var(--green); background: var(--green-soft); cursor: pointer; font-size: 10px; }
 .notes-empty { margin-top: 10px; }
 
+.item-title-link { max-width: 100%; padding: 0; border: 0; color: inherit; background: none; cursor: pointer; text-align: left; font: inherit; }
+.item-title-link:hover { color: var(--accent-hover); }
+.item-title-link:focus-visible { border-radius: 3px; outline: 2px solid var(--accent); outline-offset: 3px; }
+.item-detail { display: grid; gap: 20px; }
+.detail-back { width: fit-content; padding: 5px 0; display: inline-flex; align-items: center; gap: 7px; border: 0; color: var(--muted); background: none; cursor: pointer; font-size: 12px; font-weight: 650; }
+.detail-back:hover { color: var(--accent-hover); }
+.detail-hero { min-height: 225px; padding: 25px 29px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+.task-detail-hero { background: linear-gradient(135deg, var(--surface), var(--green-soft)); }
+.note-detail-hero { background: linear-gradient(135deg, var(--surface), var(--accent-soft)); }
+.detail-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.detail-type { color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: 1.3px; }
+.detail-actions { display: flex; align-items: center; gap: 8px; }
+.detail-title-wrap { min-width: 0; }
+.detail-title-wrap h1 { max-width: 700px; margin: 8px 0 0; font: 800 clamp(27px, 4vw, 39px)/1.18 'Manrope', sans-serif; letter-spacing: -1.4px; overflow-wrap: anywhere; }
+.detail-category { margin: 9px 0 0; color: var(--muted); font-size: 13px; }
+.detail-status { width: fit-content; padding: 6px 9px; display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; color: #64816b; background: var(--green-soft); font-size: 11px; font-weight: 700; }
+.detail-status.is-complete { color: var(--muted); background: var(--surface-muted); }
+.detail-tags { margin-top: 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); }
+.detail-tags span { padding: 4px 8px; border-radius: 6px; color: var(--green); background: var(--green-soft); font-size: 11px; }
+.detail-content-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .8fr); gap: 13px; align-items: stretch; }
+.detail-card, .detail-next-step, .item-detail-missing { padding: 21px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 5px 18px rgba(47, 57, 49, .025); }
+.detail-card-heading { display: flex; align-items: center; gap: 11px; }
+.detail-icon { width: 39px; height: 39px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; color: var(--accent-hover); background: var(--accent-soft); }
+.detail-card-heading .eyebrow { margin-bottom: 3px; }
+.detail-card-heading h2, .detail-next-step h2 { margin: 0; font: 700 15px 'Manrope', sans-serif; }
+.detail-facts { margin: 18px 0 0; }
+.detail-facts > div { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); }
+.detail-facts dt { color: var(--muted); font-size: 11px; }
+.detail-facts dd { margin: 0; color: var(--ink); text-align: right; font-size: 11px; font-weight: 600; }
+.detail-next-step { display: flex; flex-direction: column; align-items: flex-start; gap: 13px; background: var(--surface-muted); }
+.detail-next-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; color: var(--green); background: var(--green-soft); }
+.detail-next-step p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.detail-next-step .primary-button, .detail-next-step .secondary-button { margin-top: auto; }
+.note-reading-card { padding: 24px 28px; }
+.note-reading-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.note-reading-meta span:first-child { display: flex; align-items: center; gap: 6px; }
+.note-reading-content { padding-top: 17px; color: var(--ink); font-size: 14px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.item-detail-missing { min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.item-detail-missing h1 { margin: 14px 0 5px; font: 750 23px 'Manrope', sans-serif; }
+.item-detail-missing p { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
 .calendar-layout, .stats-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(200px, .9fr); gap: 14px; align-items: start; }
 .calendar-card, .calendar-side-card, .stats-card { padding: 19px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); }
 .calendar-month { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -336,6 +377,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .page-heading { margin-bottom: 22px; }
   .page-heading h1 { font-size: 29px; }
   .page-subtitle { font-size: 12px; }
+  .detail-hero { min-height: 190px; padding: 20px 18px; gap: 20px; }
+  .detail-hero-top { align-items: flex-start; }
+  .detail-actions { gap: 6px; }
+  .detail-actions .secondary-button { min-height: 34px; padding: 0 9px; font-size: 11px; }
+  .detail-actions .icon-button { width: 34px; height: 34px; }
+  .detail-content-grid { grid-template-columns: 1fr; }
+  .detail-card, .detail-next-step { padding: 17px; }
+  .note-reading-card { padding: 19px; }
+  .note-reading-content { font-size: 13px; }
   .focus-card { min-height: 182px; padding: 22px 19px; gap: 8px; }
   .focus-progress { flex-basis: 78px; width: 78px; height: 78px; }
   .focus-progress strong { font-size: 18px; }

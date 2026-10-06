@@ -113,12 +113,12 @@ export function DatePicker({ label, value, onChange, id }) {
   };
 
   return (
-    <div className="date-time-field">
-      <label className="form-label" htmlFor={datePickerId}>{label}</label>
+    <div className="min-w-0">
+      <label className="mt-[15px] mb-[7px] block text-[11px] font-bold text-[var(--ink)]" htmlFor={datePickerId}>{label}</label>
       <button
         ref={triggerRef}
         id={datePickerId}
-        className="date-time-trigger"
+        className="flex min-h-[41px] w-full min-w-0 items-center gap-[9px] rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-[11px] text-left !text-[12px] !text-[var(--ink)] transition-all duration-300 hover:border-[var(--green)] hover:bg-[var(--surface)] aria-expanded:border-[var(--green)] aria-expanded:shadow-[0_0_0_2px_color-mix(in_srgb,var(--green),transparent_86%)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:!text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:aria-expanded:border-[var(--accent-cyan)] dark:aria-expanded:shadow-[0_0_0_2px_rgba(6,182,212,.18)] max-[760px]:min-h-[44px]"
         type="button"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
@@ -128,13 +128,13 @@ export function DatePicker({ label, value, onChange, id }) {
           setIsOpen((open) => !open);
         }}
       >
-        <CalendarDays size={16} aria-hidden="true" />
-        <span>{selectedDate ? selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Choose a date'}</span>
-        <ChevronDown className="date-time-chevron" size={15} aria-hidden="true" />
+        <CalendarDays className="shrink-0 text-[var(--green)]" size={16} aria-hidden="true" />
+        <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[var(--ink)]">{selectedDate ? selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Choose a date'}</span>
+        <ChevronDown className="shrink-0 text-[var(--muted)]" size={15} aria-hidden="true" />
       </button>
       {isOpen && position && createPortal(
         <div
-          className={`date-time-picker-backdrop${position.mobile ? ' mobile' : ''}`}
+          className={position.mobile ? 'fixed inset-0 z-[64] grid place-items-center bg-[rgba(19,27,23,.5)] p-3 backdrop-blur-[3px]' : 'contents'}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setIsOpen(false);
           }}
@@ -142,22 +142,22 @@ export function DatePicker({ label, value, onChange, id }) {
           <section
             ref={panelRef}
             id={`${datePickerId}-calendar`}
-            className="date-picker-popover"
+            className="fixed z-[65] overflow-y-auto overscroll-contain rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-[15px] text-[var(--ink)] shadow-[0_18px_48px_rgba(28,39,33,.22)] dark:border-[var(--border-color)] dark:bg-[var(--glass-bg)] dark:text-[var(--text-primary)] dark:backdrop-blur-[20px] max-[760px]:rounded-xl max-[760px]:p-[13px]"
             style={position.style}
             role="dialog"
             aria-label={`Choose ${label.toLowerCase()}`}
           >
-          <div className="date-picker-heading">
-            <strong>{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong>
-            <div className="date-picker-month-controls">
-              <button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month"><ChevronLeft size={17} /></button>
-              <button type="button" onClick={() => shiftMonth(1)} aria-label="Next month"><ChevronRight size={17} /></button>
+          <div className="mb-3 flex items-center justify-between gap-2.5">
+            <strong className="font-['Manrope',sans-serif] text-[14px] font-bold dark:font-sans dark:text-[var(--text-primary)]">{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong>
+            <div className="flex gap-[5px]">
+              <button className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-muted)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:hover:text-[var(--accent-cyan)] max-[760px]:h-10 max-[760px]:w-10" type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month"><ChevronLeft size={17} /></button>
+              <button className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-muted)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:hover:text-[var(--accent-cyan)] max-[760px]:h-10 max-[760px]:w-10" type="button" onClick={() => shiftMonth(1)} aria-label="Next month"><ChevronRight size={17} /></button>
             </div>
           </div>
-          <div className="date-picker-weekdays" aria-hidden="true">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
+          <div className="mb-[5px] grid grid-cols-7 gap-[3px]" aria-hidden="true">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span className="grid h-[30px] place-items-center text-[10px] font-bold text-[var(--muted)]" key={`${day}-${index}`}>{day}</span>)}
           </div>
-          <div className="date-picker-days">
+          <div className="grid grid-cols-7 gap-[3px]">
             {calendarDays.map((date) => {
               const dayKey = toDateKey(date);
               const isCurrentMonth = date.getMonth() === month;
@@ -165,7 +165,7 @@ export function DatePicker({ label, value, onChange, id }) {
                 <button
                   key={dayKey}
                   type="button"
-                  className={`date-picker-day${isCurrentMonth ? '' : ' outside-month'}${dayKey === selectedKey ? ' selected' : ''}${dayKey === todayKey ? ' today' : ''}`}
+                  className={`grid aspect-square min-w-0 place-items-center rounded-[9px] border border-transparent bg-transparent !text-[12px] !text-[var(--ink)] hover:bg-[var(--surface-muted)] max-[760px]:rounded-lg dark:rounded-[var(--radius-sm)] ${dayKey === selectedKey ? 'border-[var(--green)] bg-[var(--green)] !text-white dark:border-[var(--accent-cyan)] dark:bg-[rgba(6,182,212,.15)] dark:!text-[var(--accent-cyan)]' : dayKey === todayKey ? 'border-[var(--accent)] !font-bold !text-[var(--accent-hover)]' : !isCurrentMonth ? '!text-[var(--muted)] opacity-[.62]' : ''}`}
                   aria-label={date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                   aria-pressed={dayKey === selectedKey}
                   onClick={() => chooseDate(date)}
@@ -175,9 +175,9 @@ export function DatePicker({ label, value, onChange, id }) {
               );
             })}
           </div>
-          <div className="date-picker-footer">
-            <button type="button" className="date-picker-clear" onClick={() => { onChange(''); setIsOpen(false); }}>Clear date</button>
-            <button type="button" className="date-picker-today" onClick={() => chooseDate(new Date())}>Today</button>
+          <div className="mt-3 flex items-center justify-between gap-2.5 border-t border-[var(--line)] pt-[10px] dark:border-[var(--border-color)]">
+            <button type="button" className="min-h-[34px] rounded-lg bg-transparent px-[10px] !text-[11px] !font-bold !text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:!text-[var(--accent-hover)] max-[760px]:min-h-10" onClick={() => { onChange(''); setIsOpen(false); }}>Clear date</button>
+            <button type="button" className="min-h-[34px] rounded-lg bg-[var(--green-soft)] px-[10px] !text-[11px] !font-bold !text-[var(--green)] max-[760px]:min-h-10" onClick={() => chooseDate(new Date())}>Today</button>
           </div>
           </section>
         </div>,
@@ -226,12 +226,12 @@ export function TimePicker({ label, value, onChange, id }) {
   const displayedParts = timeParts(value || toTimeValue(parts.hour, parts.minute, parts.period));
 
   return (
-    <div className="date-time-field">
-      <label className="form-label" htmlFor={timePickerId}>{label}</label>
+    <div className="min-w-0">
+      <label className="mt-[15px] mb-[7px] block text-[11px] font-bold text-[var(--ink)]" htmlFor={timePickerId}>{label}</label>
       <button
         ref={triggerRef}
         id={timePickerId}
-        className="date-time-trigger"
+        className="flex min-h-[41px] w-full min-w-0 items-center gap-[9px] rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-[11px] text-left !text-[12px] !text-[var(--ink)] transition-all duration-300 hover:border-[var(--green)] hover:bg-[var(--surface)] aria-expanded:border-[var(--green)] aria-expanded:shadow-[0_0_0_2px_color-mix(in_srgb,var(--green),transparent_86%)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:!text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:aria-expanded:border-[var(--accent-cyan)] dark:aria-expanded:shadow-[0_0_0_2px_rgba(6,182,212,.18)] max-[760px]:min-h-[44px]"
         type="button"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
@@ -241,13 +241,13 @@ export function TimePicker({ label, value, onChange, id }) {
           setIsOpen((open) => !open);
         }}
       >
-        <Clock3 size={16} aria-hidden="true" />
-        <span>{value ? new Date(2000, 0, 1, ...value.split(':').map(Number)).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Choose a time'}</span>
-        <ChevronDown className="date-time-chevron" size={15} aria-hidden="true" />
+        <Clock3 className="shrink-0 text-[var(--green)]" size={16} aria-hidden="true" />
+        <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[var(--ink)]">{value ? new Date(2000, 0, 1, ...value.split(':').map(Number)).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Choose a time'}</span>
+        <ChevronDown className="shrink-0 text-[var(--muted)]" size={15} aria-hidden="true" />
       </button>
       {isOpen && position && createPortal(
         <div
-          className={`date-time-picker-backdrop${position.mobile ? ' mobile' : ''}`}
+          className={position.mobile ? 'fixed inset-0 z-[64] grid place-items-center bg-[rgba(19,27,23,.5)] p-3 backdrop-blur-[3px]' : 'contents'}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setIsOpen(false);
           }}
@@ -255,32 +255,32 @@ export function TimePicker({ label, value, onChange, id }) {
           <section
             ref={panelRef}
             id={`${timePickerId}-picker`}
-            className="time-picker-popover"
+            className="fixed z-[65] overflow-y-auto overscroll-contain rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-[15px] text-[var(--ink)] shadow-[0_18px_48px_rgba(28,39,33,.22)] dark:border-[var(--border-color)] dark:bg-[var(--glass-bg)] dark:text-[var(--text-primary)] dark:backdrop-blur-[20px] max-[760px]:rounded-xl max-[760px]:p-[13px]"
             style={position.style}
             role="dialog"
             aria-label={`Choose ${label.toLowerCase()}`}
           >
-          <strong className="time-picker-title">Choose a time</strong>
-          <div className="time-picker-controls">
-            <div className="time-stepper">
-              <span>Hour</span>
-              <button type="button" onClick={() => adjust('hour', 1)} aria-label="Increase hour"><Plus size={15} /></button>
-              <strong aria-live="polite">{String(displayedParts.hour).padStart(2, '0')}</strong>
-              <button type="button" onClick={() => adjust('hour', -1)} aria-label="Decrease hour"><Minus size={15} /></button>
+          <strong className="mb-[14px] block font-['Manrope',sans-serif] text-[14px] font-bold dark:font-sans dark:text-[var(--text-primary)]">Choose a time</strong>
+          <div className="grid grid-cols-[minmax(65px,1fr)_12px_minmax(65px,1fr)_auto] items-center gap-[6px]">
+            <div className="grid justify-items-center gap-2">
+              <span className="text-[10px] font-bold text-[var(--muted)]">Hour</span>
+              <button className="grid h-8 w-[38px] place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-muted)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:hover:text-[var(--accent-cyan)] max-[760px]:h-10 max-[760px]:w-[42px]" type="button" onClick={() => adjust('hour', 1)} aria-label="Increase hour"><Plus size={15} /></button>
+              <strong className="font-['Manrope',sans-serif] text-2xl font-bold tabular-nums dark:font-sans dark:text-[var(--text-primary)]" aria-live="polite">{String(displayedParts.hour).padStart(2, '0')}</strong>
+              <button className="grid h-8 w-[38px] place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-muted)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:hover:text-[var(--accent-cyan)] max-[760px]:h-10 max-[760px]:w-[42px]" type="button" onClick={() => adjust('hour', -1)} aria-label="Decrease hour"><Minus size={15} /></button>
             </div>
-            <span className="time-separator">:</span>
-            <div className="time-stepper">
-              <span>Minute</span>
-              <button type="button" onClick={() => adjust('minute', 1)} aria-label="Increase minute"><Plus size={15} /></button>
-              <strong aria-live="polite">{String(displayedParts.minute).padStart(2, '0')}</strong>
-              <button type="button" onClick={() => adjust('minute', -1)} aria-label="Decrease minute"><Minus size={15} /></button>
+            <span className="mt-[18px] self-center font-['Manrope',sans-serif] text-xl font-bold text-[var(--muted)] dark:font-sans dark:text-[var(--text-primary)]">:</span>
+            <div className="grid justify-items-center gap-2">
+              <span className="text-[10px] font-bold text-[var(--muted)]">Minute</span>
+              <button className="grid h-8 w-[38px] place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-muted)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:hover:text-[var(--accent-cyan)] max-[760px]:h-10 max-[760px]:w-[42px]" type="button" onClick={() => adjust('minute', 1)} aria-label="Increase minute"><Plus size={15} /></button>
+              <strong className="font-['Manrope',sans-serif] text-2xl font-bold tabular-nums dark:font-sans dark:text-[var(--text-primary)]" aria-live="polite">{String(displayedParts.minute).padStart(2, '0')}</strong>
+              <button className="grid h-8 w-[38px] place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-muted)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-card-hover)] dark:hover:text-[var(--accent-cyan)] max-[760px]:h-10 max-[760px]:w-[42px]" type="button" onClick={() => adjust('minute', -1)} aria-label="Decrease minute"><Minus size={15} /></button>
             </div>
-            <div className="time-period">
+            <div className="mt-[18px] grid gap-[6px]">
               {['AM', 'PM'].map((period) => (
                 <button
                   key={period}
                   type="button"
-                  className={displayedParts.period === period ? 'selected' : ''}
+                  className={`min-h-9 min-w-12 rounded-lg border border-[var(--line)] bg-[var(--surface)] !text-[11px] !font-bold !text-[var(--muted)] dark:rounded-[var(--radius-sm)] dark:border-[var(--border-color)] dark:bg-[var(--bg-card)] dark:!text-[var(--text-primary)] max-[760px]:min-h-[42px] max-[760px]:min-w-[52px] ${displayedParts.period === period ? 'border-[var(--green)] bg-[var(--green-soft)] !text-[var(--green)] dark:border-[var(--accent-cyan)] dark:bg-[rgba(6,182,212,.15)] dark:!text-[var(--accent-cyan)]' : ''}`}
                   aria-pressed={displayedParts.period === period}
                   onClick={() => updateParts({ ...displayedParts, period })}
                 >
@@ -289,9 +289,9 @@ export function TimePicker({ label, value, onChange, id }) {
               ))}
             </div>
           </div>
-          <div className="time-picker-footer">
-            <button type="button" className="date-picker-clear" onClick={() => { onChange(''); setIsOpen(false); }}>Clear time</button>
-            <button type="button" className="date-picker-today" onClick={() => { onChange(toTimeValue(displayedParts.hour, displayedParts.minute, displayedParts.period)); setIsOpen(false); triggerRef.current?.focus(); }}>Done</button>
+          <div className="mt-3 flex items-center justify-between gap-2.5 border-t border-[var(--line)] pt-[10px] dark:border-[var(--border-color)]">
+            <button type="button" className="min-h-[34px] rounded-lg bg-transparent px-[10px] !text-[11px] !font-bold !text-[var(--muted)] hover:bg-[var(--accent-soft)] hover:!text-[var(--accent-hover)] max-[760px]:min-h-10" onClick={() => { onChange(''); setIsOpen(false); }}>Clear time</button>
+            <button type="button" className="min-h-[34px] rounded-lg bg-[var(--green-soft)] px-[10px] !text-[11px] !font-bold !text-[var(--green)] max-[760px]:min-h-10" onClick={() => { onChange(toTimeValue(displayedParts.hour, displayedParts.minute, displayedParts.period)); setIsOpen(false); triggerRef.current?.focus(); }}>Done</button>
           </div>
           </section>
         </div>,

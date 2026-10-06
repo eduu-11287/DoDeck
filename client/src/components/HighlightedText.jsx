@@ -7,7 +7,7 @@ export default function HighlightedText({ children, query }) {
   const parts = text.split(new RegExp(`(${escaped})`, 'ig'));
   return parts.map((part, index) => (
     part.toLowerCase() === search.toLowerCase()
-      ? <mark className="search-match" key={`${part}-${index}`}>{part}</mark>
+      ? <mark className="rounded-[2px] bg-amber-200 px-px text-inherit dark:bg-amber-900/60" key={`${part}-${index}`}>{part}</mark>
       : part
   ));
 }

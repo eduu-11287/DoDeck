@@ -74,11 +74,11 @@ export default function DropdownSelect({ id, value, options, onChange, label, cl
   };
 
   return (
-    <div className="dropdown-select-field">
+    <div className="min-w-0">
       <button
         ref={triggerRef}
         id={selectId}
-        className={`dropdown-trigger ${className}`}
+        className={`group flex min-h-11 w-full min-w-0 items-center justify-between gap-2.5 rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 text-left text-xs text-[var(--ink)] transition-all duration-300 hover:border-emerald-600 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 aria-expanded:border-emerald-600 aria-expanded:ring-2 aria-expanded:ring-emerald-500/15 dark:border-white/5 dark:bg-aurora-base dark:text-aurora-text dark:hover:border-aurora-cyan dark:focus-visible:outline-aurora-cyan dark:aria-expanded:border-aurora-cyan dark:aria-expanded:ring-aurora-cyan/20 ${className}`}
         type="button"
         role="combobox"
         aria-label={ariaLabel}
@@ -94,15 +94,15 @@ export default function DropdownSelect({ id, value, options, onChange, label, cl
           }
         }}
       >
-        <span className="dropdown-value">{selectedOption?.label}</span>
-        <ChevronDown className="dropdown-chevron" size={15} aria-hidden="true" />
+        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{selectedOption?.label}</span>
+        <ChevronDown className="shrink-0 text-[var(--muted)] transition-transform duration-300 group-aria-expanded:rotate-180 dark:text-aurora-cyan" size={15} aria-hidden="true" />
       </button>
       {!label && !ariaLabel && <span id={`${selectId}-label`} className="sr-only">Choose an option</span>}
       {isOpen && position && createPortal(
         <div
           ref={menuRef}
           id={`${selectId}-options`}
-          className="dropdown-menu filter-menu"
+          className="fixed z-[70] max-h-[280px] overflow-y-auto overscroll-contain rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-xl backdrop-blur-xl dark:border-white/5 dark:bg-aurora-card/90"
           role="listbox"
           aria-label={label || ariaLabel || 'Options'}
           style={position}
@@ -114,7 +114,7 @@ export default function DropdownSelect({ id, value, options, onChange, label, cl
           {options.map((option) => (
             <button
               key={option.value}
-              className={`filter-option${option.value === value ? ' selected' : ''}`}
+              className={`flex min-h-[42px] w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left text-xs text-[var(--ink)] transition-all duration-300 hover:bg-[var(--surface-muted)] focus-visible:bg-[var(--surface-muted)] focus-visible:outline-none dark:text-aurora-text dark:hover:bg-aurora-card-hover dark:focus-visible:bg-aurora-card-hover${option.value === value ? ' bg-emerald-50 font-semibold text-emerald-700 dark:bg-aurora-cyan/15 dark:text-aurora-cyan' : ''}`}
               type="button"
               role="option"
               aria-selected={option.value === value}

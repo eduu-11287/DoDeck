@@ -118,7 +118,7 @@ export default function TooltipLayer() {
   return createPortal(
     <div
       id="daymark-tooltip"
-      className={`app-tooltip app-tooltip-${tooltip.placement}`}
+      className={`pointer-events-none fixed z-[1000] max-w-[min(260px,calc(100vw-24px))] rounded-[9px] border border-[rgba(255,255,255,.08)] bg-[#26342e] px-[11px] py-2 text-center text-[11px] font-semibold leading-[1.4] whitespace-normal text-[#f9fbf8] shadow-[0_8px_24px_rgba(15,23,18,.2)] animate-[tooltip-enter_.12s_ease-out_both] before:absolute before:left-1/2 before:h-[7px] before:w-[7px] before:-translate-x-1/2 before:rotate-45 before:bg-[#26342e] before:content-[''] dark:border-[var(--border-color)] dark:bg-[var(--bg-card-hover)] dark:text-[var(--text-primary)] dark:before:border-[var(--border-color)] dark:before:bg-[var(--bg-card-hover)] ${tooltip.placement === 'above' ? '-translate-x-1/2 -translate-y-full before:bottom-[-4px] before:border-r before:border-b' : '-translate-x-1/2 before:top-[-4px] before:border-t before:border-l'}`}
       role="tooltip"
       style={{ left: tooltip.left, top: tooltip.top }}
     >

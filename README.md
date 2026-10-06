@@ -110,12 +110,17 @@ npm run dev
 
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite 8
+- **Frontend**: React 18 + Vite 8 + Tailwind CSS 4 (Vite plugin)
 - **Backend**: Flask 2.3 + SQLAlchemy + Flask-Migrate
 - **Database**: PostgreSQL 15 (Docker) / SQLite (local dev)
 - **Authentication**: Flask session-based
 - **PDF Generation**: fpdf2
 - **Deployment**: Docker Compose + Gunicorn + Nginx
+
+The client is transitioning from its legacy component stylesheet to Tailwind
+utilities. Arctic Aurora tokens are defined in the Tailwind theme, and the
+shared dropdowns and task filters now use Tailwind utilities; remaining
+component styling is still in `client/src/index.css` while it is migrated.
 
 ## Environment Variables
 

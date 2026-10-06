@@ -24,7 +24,10 @@ function initialTab(route) {
 
 function OfflineNotice({ snapshotAt }) {
   return (
-    <div className="offline-banner" role="status">
+    <div
+      className="fixed bottom-4 right-4 z-[80] max-w-[min(440px,calc(100%-32px))] rounded-[10px] border border-amber-300 bg-amber-50 px-[15px] py-3 text-[11px] leading-relaxed text-amber-900 shadow-lg dark:border-amber-400/30 dark:bg-aurora-card/95 dark:text-aurora-amber max-[760px]:bottom-[calc(68px+env(safe-area-inset-bottom))] max-[760px]:right-[10px] max-[760px]:left-[10px] max-[760px]:max-w-none max-[760px]:text-center"
+      role="status"
+    >
       {snapshotAt
         ? `Offline read-only · Showing saved workspace from ${new Date(snapshotAt).toLocaleString()}.`
         : 'You’re offline. Your saved workspace is unavailable on this device.'}
@@ -366,9 +369,9 @@ export default function App() {
     return (
       <>
         {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
-        <main className="loading-screen" aria-label="Loading Daymark">
-          <div className="brand-mark">d</div>
-          <p>Getting your day in order…</p>
+        <main className="grid min-h-screen content-center justify-items-center gap-3 bg-[var(--canvas)] text-xs text-[var(--muted)] dark:bg-aurora-base" aria-label="Loading Daymark">
+          <div className="grid size-[30px] place-items-center rounded-[10px] bg-[var(--accent)] font-sans text-[19px] font-extrabold text-white">d</div>
+          <p className="m-0">Getting your day in order…</p>
         </main>
       </>
     );
@@ -379,7 +382,7 @@ export default function App() {
       <>
         <AuthOverlay onAuth={setAuth} />
         {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
-        {notice && <div className="toast toast-error" role="alert">{notice}</div>}
+        {notice && <div className="fixed bottom-4 left-1/2 z-[100] max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-xl dark:border-red-400/30 dark:bg-red-950/80 dark:text-red-200" role="alert">{notice}</div>}
       </>
     );
   }
@@ -393,7 +396,9 @@ export default function App() {
   };
 
   return (
-    <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}${!isOnline ? ' offline-readonly' : ''}`}>
+    <div className="relative isolate min-h-screen bg-[var(--canvas)] text-[var(--ink)] transition-colors duration-300 dark:bg-aurora-base dark:text-aurora-text">
+      <div aria-hidden="true" className="pointer-events-none fixed -right-[16vw] -top-[28vh] z-0 size-[min(58vw,780px)] rounded-full bg-[radial-gradient(ellipse,rgba(6,182,212,0.25)_0%,transparent_70%)] opacity-0 blur-[120px] dark:opacity-100" />
+      <div aria-hidden="true" className="pointer-events-none fixed -bottom-[34vh] -left-[18vw] z-0 size-[min(58vw,650px)] rounded-full bg-[radial-gradient(ellipse,rgba(59,130,246,0.2)_0%,transparent_70%)] opacity-0 blur-[120px] dark:opacity-100" />
       <BrandMural />
       {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
       <Header
@@ -405,7 +410,7 @@ export default function App() {
         searchQuery={searchQuery}
         onSearch={setSearchQuery}
         searchCounts={{
-          tasks: tasks.filter((task) => `${task.name} ${task.category || ''} ${task.description || ''} ${(task.checklist || []).map((item) => item.text).join(' ')}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
+          tasks: tasks.filter((task) => `${task.name} ${task.category || ''} ${task.description || ''}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
           notes: notes.filter((note) => `${note.topic} ${note.content || ''} ${(note.tags || []).join(' ')}`.toLowerCase().includes(searchQuery.toLowerCase())).length,
         }}
       />
@@ -417,7 +422,7 @@ export default function App() {
         onToggleCollapsed={toggleSidebar}
       />
 
-      <main className="main-content">
+      <main className={`relative z-[1] mr-0 w-[min(1680px,calc(100vw-300px))] ml-[244px] px-6 pr-6 pb-20 pt-[35px] max-[1050px]:w-[min(1680px,calc(100vw-268px))] max-[1050px]:ml-[236px] max-[1050px]:pr-4 max-[760px]:ml-0 max-[760px]:w-full max-[760px]:px-[17px] max-[760px]:pb-[calc(100px+env(safe-area-inset-bottom))] max-[760px]:pt-7${sidebarCollapsed ? ' w-[min(1680px,calc(100vw-148px))] ml-[92px] max-[1050px]:w-[min(1680px,calc(100vw-124px))] max-[1050px]:ml-[92px]' : ''}`}>
         {detailRoute ? (
           <ItemDetail
             kind={detailRoute.kind}
@@ -444,12 +449,12 @@ export default function App() {
           />
         ) : (
           <>
-            <div className="page-heading">
-              <p className="eyebrow">DAYMARK <span>·</span> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-              <h1>{pageTitles[activeTab][0]}</h1>
-              <p className="page-subtitle">{pageTitles[activeTab][1]}</p>
+            <div className="mb-[29px]">
+              <p className="mb-2 text-[10px] font-bold tracking-[1.35px] text-[var(--accent-hover)]">{'DAYMARK '}<span className="px-[5px] text-[var(--muted)]">·</span> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+              <h1 className="m-0 font-sans text-[clamp(27px,3.2vw,37px)] font-extrabold leading-[1.18] tracking-[-1.6px] text-white dark:text-aurora-text">{pageTitles[activeTab][0]}</h1>
+              <p className="mt-2 text-sm text-[var(--muted)]">{pageTitles[activeTab][1]}</p>
             </div>
-            <div className="view-content" hidden={activeTab !== 'today'}>
+            <div className="w-full" hidden={activeTab !== 'today'}>
               <TaskPanel
                 username={auth.username}
                 tasks={tasks}
@@ -465,7 +470,7 @@ export default function App() {
                 isOffline={!isOnline}
               />
             </div>
-            <div className="view-content" hidden={activeTab !== 'notes'}>
+            <div className="w-full" hidden={activeTab !== 'notes'}>
               <NotesPanel
                 notes={notes}
                 tasks={tasks}
@@ -479,18 +484,18 @@ export default function App() {
               />
             </div>
             <AnimatePresence mode="wait">
-              {activeTab === 'calendar' && <motion.div key="calendar" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><CalendarView tasks={tasks} onOpenItem={(id) => openDetail('tasks', id)} /></motion.div>}
-              {activeTab === 'stats' && <motion.div key="stats" className="view-content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><StatsView tasks={tasks} streak={streak} /></motion.div>}
+              {activeTab === 'calendar' && <motion.div key="calendar" className="w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><CalendarView tasks={tasks} onOpenItem={(id) => openDetail('tasks', id)} /></motion.div>}
+              {activeTab === 'stats' && <motion.div key="stats" className="w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><StatsView tasks={tasks} streak={streak} /></motion.div>}
             </AnimatePresence>
           </>
         )}
       </main>
       {tabs.includes(activeTab) && (
-        <nav className="mobile-nav" aria-label="Main navigation">
+        <nav className="fixed bottom-0 left-0 right-0 z-[35] hidden border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--surface),transparent_2%)] px-[max(12px,env(safe-area-inset-right))] pb-[max(8px,env(safe-area-inset-bottom))] pl-[max(12px,env(safe-area-inset-left))] pt-2 backdrop-blur-[14px] max-[760px]:block" aria-label="Main navigation">
           <Sidebar activeTab={activeTab} setActiveTab={selectTab} taskCount={activeTaskCount} mobile />
         </nav>
       )}
-      {notice && <div className="toast toast-error" role="alert">{notice}<button aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button></div>}
+      {notice && <div className="fixed bottom-4 left-1/2 z-[100] flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-xl dark:border-red-400/30 dark:bg-red-950/80 dark:text-red-200" role="alert">{notice}<button className="rounded-md px-2 py-1 hover:bg-red-100 dark:hover:bg-red-900" aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button></div>}
     </div>
   );
 }

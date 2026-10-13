@@ -4,15 +4,15 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", sans-serif;
-  --color-aurora-base: #080A10;
-  --color-aurora-card: #0F131C;
-  --color-aurora-card-hover: #161B26;
-  --color-aurora-cyan: #06B6D4;
-  --color-aurora-blue: #3B82F6;
+  --color-aurora-base: #17231D;
+  --color-aurora-card: #202E27;
+  --color-aurora-card-hover: #2B3B32;
+  --color-aurora-cyan: #E08A6B;
+  --color-aurora-blue: #96B59A;
   --color-aurora-amber: #F59E0B;
   --color-aurora-red: #EF4444;
-  --color-aurora-text: #E2E8F0;
-  --color-aurora-muted: #64748B;
+  --color-aurora-text: #D2D9CD;
+  --color-aurora-muted: #A2B1A2;
   --radius-card: 20px;
 }
 
@@ -23,17 +23,17 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --bg-base: #080A10;
-  --bg-card: #0F131C;
-  --bg-card-hover: #161B26;
-  --accent-cyan: #06B6D4;
-  --accent-blue: #3B82F6;
+  --bg-base: #17231D;
+  --bg-card: #202E27;
+  --bg-card-hover: #2B3B32;
+  --accent-cyan: #E08A6B;
+  --accent-blue: #96B59A;
   --accent-amber: #F59E0B;
   --accent-red: #EF4444;
-  --text-primary: #E2E8F0;
-  --text-secondary: #64748B;
-  --border-color: rgba(255, 255, 255, 0.05);
-  --glass-bg: rgba(15, 19, 28, 0.7);
+  --text-primary: #D2D9CD;
+  --text-secondary: #A2B1A2;
+  --border-color: rgba(170, 190, 169, 0.16);
+  --glass-bg: rgba(26, 38, 31, 0.88);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
@@ -61,11 +61,11 @@
   --ink: var(--text-primary);
   --muted: var(--text-secondary);
   --line: var(--border-color);
-  --accent: var(--accent-cyan);
-  --accent-hover: #22D3EE;
-  --accent-soft: rgba(6, 182, 212, 0.15);
-  --green: var(--accent-blue);
-  --green-soft: rgba(59, 130, 246, 0.15);
+  --accent: #DD7254;
+  --accent-hover: #E8896C;
+  --accent-soft: rgba(221, 114, 84, 0.16);
+  --green: #96B59A;
+  --green-soft: rgba(150, 181, 154, 0.16);
   --shadow: 0 16px 42px rgba(0, 0, 0, .36);
 }
 
@@ -78,11 +78,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .app-shell { position: relative; isolation: isolate; min-height: 100vh; background: var(--canvas); }
 .app-shell::before, .app-shell::after { position: fixed; z-index: 0; width: min(58vw, 780px); height: min(58vw, 650px); border-radius: 50%; content: ''; filter: blur(120px); pointer-events: none; }
-.app-shell::before { top: -28vh; right: -16vw; background: radial-gradient(ellipse, rgba(6, 182, 212, 0.25) 0%, transparent 70%); }
-.app-shell::after { bottom: -34vh; left: -18vw; background: radial-gradient(ellipse, rgba(59, 130, 246, 0.2) 0%, transparent 70%); }
+.app-shell::before { top: -28vh; right: -16vw; background: radial-gradient(ellipse, rgba(221, 114, 84, 0.14) 0%, transparent 70%); }
+.app-shell::after { bottom: -34vh; left: -18vw; background: radial-gradient(ellipse, rgba(139, 169, 143, 0.12) 0%, transparent 70%); }
 .brand-mural { position: fixed; z-index: 0; right: -3vw; bottom: 2vh; width: min(55vw, 760px); height: 48vh; color: var(--green); opacity: .2; pointer-events: none; }
 .brand-mural svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
-.brand-mural-watermark { position: absolute; right: 1vw; bottom: 4vh; display: grid; color: transparent; background: linear-gradient(180deg, rgba(6, 182, 212, 0.15), transparent); background-clip: text; -webkit-background-clip: text; font-size: 7vw; font-weight: 800; line-height: .92; text-align: right; text-transform: uppercase; transform: rotate(-4deg); }
+.brand-mural-watermark { position: absolute; right: 1vw; bottom: 4vh; display: grid; color: transparent; background: linear-gradient(180deg, rgba(221, 114, 84, 0.15), transparent); background-clip: text; -webkit-background-clip: text; font-size: 7vw; font-weight: 800; line-height: .92; text-align: right; text-transform: uppercase; transform: rotate(-4deg); }
 .mural-word { font: italic 900 78px/1 'Plus Jakarta Sans', sans-serif; letter-spacing: -5px; paint-order: stroke fill; stroke: var(--green); stroke-width: 2px; }
 .mural-word-one { fill: color-mix(in srgb, var(--green), transparent 86%); transform: rotate(-7deg); transform-origin: 50% 50%; }
 .mural-word-two { fill: color-mix(in srgb, var(--accent), transparent 89%); stroke: var(--accent); transform: rotate(-5deg); transform-origin: 50% 50%; }
@@ -556,12 +556,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 :root.dark .auth-screen { background: var(--bg-base); }
 :root.dark .auth-screen::before,
 :root.dark .auth-screen::after { position: fixed; z-index: 0; width: 55vw; height: 55vw; border-radius: 50%; content: ''; filter: blur(120px); pointer-events: none; }
-:root.dark .auth-screen::before { top: -25vh; right: -15vw; background: radial-gradient(ellipse, rgba(6, 182, 212, 0.25), transparent 70%); }
-:root.dark .auth-screen::after { bottom: -35vh; left: -18vw; background: radial-gradient(ellipse, rgba(59, 130, 246, 0.2), transparent 70%); }
-:root.dark .auth-decoration-one { background: rgba(6, 182, 212, 0.1); }
-:root.dark .auth-decoration-two { background: rgba(59, 130, 246, 0.1); }
+:root.dark .auth-screen::before { top: -25vh; right: -15vw; background: radial-gradient(ellipse, rgba(221, 114, 84, 0.14), transparent 70%); }
+:root.dark .auth-screen::after { bottom: -35vh; left: -18vw; background: radial-gradient(ellipse, rgba(139, 169, 143, 0.12), transparent 70%); }
+:root.dark .auth-decoration-one { background: rgba(221, 114, 84, 0.1); }
+:root.dark .auth-decoration-two { background: rgba(139, 169, 143, 0.1); }
 :root.dark .brand-mural { opacity: .9; }
-:root.dark .brand-mural-watermark { background: linear-gradient(180deg, rgba(6, 182, 212, 0.15), transparent); background-clip: text; -webkit-background-clip: text; }
+:root.dark .brand-mural-watermark { background: linear-gradient(180deg, rgba(221, 114, 84, 0.15), transparent); background-clip: text; -webkit-background-clip: text; }
 :root.dark :is(h1, h2, h3, h4, h5, h6, .brand, .brand-mark, .focus-progress strong, .daily-metrics strong, .stat-tile strong, .time-stepper > strong, .time-separator, .time-picker-title, .date-picker-heading > strong) { color: var(--text-primary); font-family: 'Plus Jakarta Sans', sans-serif; }
 :root.dark .topbar { border-color: var(--border-color); background: var(--glass-bg); }
 :root.dark .side-nav-dock { border-right: 1px solid var(--border-color); background: var(--glass-bg); backdrop-filter: blur(20px); }

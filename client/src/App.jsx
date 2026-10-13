@@ -380,7 +380,7 @@ export default function App() {
   if (!auth.authenticated) {
     return (
       <>
-        <AuthOverlay onAuth={setAuth} />
+        <AuthOverlay onAuth={setAuth} theme={theme} toggleTheme={toggleTheme} />
         {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
         {notice && <div className="fixed bottom-4 left-1/2 z-[100] max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-xl dark:border-red-400/30 dark:bg-red-950/80 dark:text-red-200" role="alert">{notice}</div>}
       </>
@@ -397,8 +397,8 @@ export default function App() {
 
   return (
     <div className="relative isolate min-h-screen bg-[var(--canvas)] text-[var(--ink)] transition-colors duration-300 dark:bg-aurora-base dark:text-aurora-text">
-      <div aria-hidden="true" className="pointer-events-none fixed -right-[16vw] -top-[28vh] z-0 size-[min(58vw,780px)] rounded-full bg-[radial-gradient(ellipse,rgba(6,182,212,0.25)_0%,transparent_70%)] opacity-0 blur-[120px] dark:opacity-100" />
-      <div aria-hidden="true" className="pointer-events-none fixed -bottom-[34vh] -left-[18vw] z-0 size-[min(58vw,650px)] rounded-full bg-[radial-gradient(ellipse,rgba(59,130,246,0.2)_0%,transparent_70%)] opacity-0 blur-[120px] dark:opacity-100" />
+      <div aria-hidden="true" className="pointer-events-none fixed -right-[16vw] -top-[28vh] z-0 size-[min(58vw,780px)] rounded-full bg-[radial-gradient(ellipse,rgba(221,114,84,0.14)_0%,transparent_70%)] opacity-0 blur-[120px] dark:opacity-100" />
+      <div aria-hidden="true" className="pointer-events-none fixed -bottom-[34vh] -left-[18vw] z-0 size-[min(58vw,650px)] rounded-full bg-[radial-gradient(ellipse,rgba(139,169,143,0.12)_0%,transparent_70%)] opacity-0 blur-[120px] dark:opacity-100" />
       <BrandMural />
       {!isOnline && <OfflineNotice snapshotAt={offlineSnapshotAt} />}
       <Header
@@ -451,7 +451,7 @@ export default function App() {
           <>
             <div className="mb-[29px]">
               <p className="mb-2 text-[10px] font-bold tracking-[1.35px] text-[var(--accent-hover)]">{'DAYMARK '}<span className="px-[5px] text-[var(--muted)]">·</span> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-              <h1 className="m-0 font-sans text-[clamp(27px,3.2vw,37px)] font-extrabold leading-[1.18] tracking-[-1.6px] text-white dark:text-aurora-text">{pageTitles[activeTab][0]}</h1>
+              <h1 className="m-0 font-sans text-[clamp(27px,3.2vw,37px)] font-extrabold leading-[1.18] tracking-[-1.6px] text-[var(--ink)]">{pageTitles[activeTab][0]}</h1>
               <p className="mt-2 text-sm text-[var(--muted)]">{pageTitles[activeTab][1]}</p>
             </div>
             <div className="w-full" hidden={activeTab !== 'today'}>

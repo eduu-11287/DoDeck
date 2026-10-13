@@ -1,4 +1,4 @@
-# Daymark — Make room for what matters
+  # Daymark — Make room for what matters
 
 A calm, focused productivity application for tasks and notes, built with a React + Vite frontend and a Flask backend, containerized with Docker and PostgreSQL.
 

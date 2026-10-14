@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarDays, Download, FileText, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
@@ -139,9 +140,10 @@ export default function NotesPanel({ notes, tasks, searchQuery, editRequest, onE
         </div>
       )}
 
-      <AnimatePresence>
-        {showModal && (
-          <motion.div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(23,31,27,.48)] p-5 backdrop-blur-[4px] max-[760px]:p-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowModal(false); }}>
+      {createPortal(
+        <AnimatePresence>
+          {showModal && (
+          <motion.div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(23,31,27,.48)] p-5 backdrop-blur-[4px] max-[760px]:p-[12px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowModal(false); }}>
             <motion.form className="max-h-[calc(100dvh-40px)] w-full max-w-[490px] overscroll-contain overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-[25px] shadow-[0_24px_70px_rgba(15,23,18,.2)] dark:border-[var(--border-color)] dark:bg-[var(--glass-bg)] dark:text-[var(--text-primary)] dark:backdrop-blur-[20px] max-[760px]:max-h-[calc(100dvh-24px)] max-[760px]:p-[18px]" onSubmit={saveNote} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>
               <div className="mb-5 flex items-start justify-between">
                 <div><span className="mb-2 block text-[10px] font-bold tracking-[1.35px] text-[var(--accent-hover)]">SAVE THIS MOMENT</span><h2 className="m-0 font-[family-name:Manrope] text-xl font-bold">{editingNote ? 'Edit note' : 'New note'}</h2></div>
@@ -162,8 +164,10 @@ export default function NotesPanel({ notes, tasks, searchQuery, editRequest, onE
               </div>
             </motion.form>
           </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </section>
   );
 }

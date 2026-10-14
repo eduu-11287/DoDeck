@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarDays, Check, ChevronDown, Circle, Clock3, Flame, Pencil, Plus, Trash2, X } from 'lucide-react';
@@ -301,9 +302,10 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
         </div>
       )}
 
-      <AnimatePresence>
-        {showModal && (
-          <motion.div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(23,31,27,.48)] p-5 backdrop-blur-[4px] max-[760px]:p-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowModal(false); }}>
+      {createPortal(
+        <AnimatePresence>
+          {showModal && (
+          <motion.div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(23,31,27,.48)] p-5 backdrop-blur-[4px] max-[760px]:p-[12px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowModal(false); }}>
             <motion.form className="max-h-[calc(100dvh-40px)] w-full max-w-[490px] overscroll-contain overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-[25px] shadow-[0_24px_70px_rgba(15,23,18,.2)] dark:border-[var(--border-color)] dark:bg-[var(--glass-bg)] dark:text-[var(--text-primary)] dark:backdrop-blur-[20px] max-[760px]:max-h-[calc(100dvh-24px)] max-[760px]:p-[18px]" onSubmit={saveTask} initial={{ opacity: 0, y: 10, scale: 0.99 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}>
               <div className="mb-5 flex items-start justify-between">
                 <div><span className="mb-2 block text-[10px] font-bold tracking-[1.35px] text-[var(--accent-hover)]">MAKE IT HAPPEN</span><h2 className="m-0 font-[family-name:Manrope] text-xl font-bold">{editingTask ? 'Edit task' : 'New task'}</h2></div>
@@ -325,8 +327,10 @@ export default function TaskPanel({ username, tasks, streak, searchQuery, quickA
               </div>
             </motion.form>
           </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </section>
   );
 }
